@@ -114,6 +114,42 @@ void esgui_flush_area(int x0, int y0, int x1, int y1, const uint8_t *buf1bpp);
  * 正常刷新时 esgui_flush_area 每帧也会自动补一次（护栏）。 */
 void tft_drv_cover_margins(void);
 
+/* =================== 坐标换算（触摸坐标 ↔ 逻辑坐标） ===================
+ * ★ 很容易搞错的一点：
+ *     触摸芯片（CST816D）报的是**面板像素**  x:0..239  y:0..283
+ *     ESGUI 画布画的是**逻辑像素**        x:0..ESGUI_LOGIC_W-1  y:0..ESGUI_LOGIC_H-1
+ *   驱动送屏时做的映射是（见 esgui_flush_area）：
+ *     panel_x = TFT_OFFSET_X + logic_x * TFT_ZOOM
+ *     panel_y = TFT_OFFSET_Y + logic_y * TFT_ZOOM
+ *   所以：**把触点画到画布上**（准星/轨迹）、或**按坐标命中某个逻辑区域**时，
+ *   必须先用下面两个函数换算；直接拿面板坐标画，位置会同时"多一个偏移 + 放大 TFT_ZOOM 倍"
+ *   （典型症状：手指在左上角，准星却跑到屏幕中间偏右下）。
+ *   只比较"位移量/阈值"（滑动分格、长按不动判定）时不用换算，用面板像素即可。
+ */
+static inline int tft_panel2logic_x(int panel_x)
+{
+    int v = panel_x - TFT_OFFSET_X;
+    v = (v <= 0) ? 0 : (v / TFT_ZOOM);
+    return (v >= ESGUI_LOGIC_W) ? (ESGUI_LOGIC_W - 1) : v;
+}
+
+static inline int tft_panel2logic_y(int panel_y)
+{
+    int v = panel_y - TFT_OFFSET_Y;
+    v = (v <= 0) ? 0 : (v / TFT_ZOOM);
+    return (v >= ESGUI_LOGIC_H) ? (ESGUI_LOGIC_H - 1) : v;
+}
+
+static inline int tft_logic2panel_x(int logic_x)
+{
+    return TFT_OFFSET_X + logic_x * TFT_ZOOM;
+}
+
+static inline int tft_logic2panel_y(int logic_y)
+{
+    return TFT_OFFSET_Y + logic_y * TFT_ZOOM;
+}
+
 /* =================== 显示自检（绕过 1bpp 画布，直接写 RGB565） ===================
  * 用途：验证"屏幕 + 接线 + 像素偏移"本身没问题（ESGUI 画错时用来分清是驱动还是框架）。
  * 调用会**阻塞** 1~2 秒（连续写几屏图案），期间不刷新 ESGUI；返回后请 ACT_REFRESH 重绘。

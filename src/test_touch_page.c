@@ -22,6 +22,7 @@
 #include "ESGUI_BSP_Text.h"
 #include "ESGUI_BSP_draw.h"         /* eui_draw_* / EUI_MODE_* */
 #include "ESGUI_PageDefaltVtbl.h"   /* ESGUI_DEFAULT_FONT */
+#include "tft_drv.h"                /* tft_panel2logic_* / TFT_SCREEN_*（坐标换算） */
 #include "touch_cst816d.h"
 #include "touch_input.h"
 
@@ -80,7 +81,10 @@ static const char *touch_gesture_name(uint8_t g)
 }
 
 /* ==================== 绘制 ====================
- * 逻辑屏 112x128：顶部 6 行文字信息（每行 ≈8 汉字），下面留给网格/十字准星/轨迹。
+ * ★ 关键：触摸芯片报的是**面板像素**（0..239 / 0..283），而这里是**逻辑画布**（112x128），
+ *   驱动送屏时会做 panel = TFT_OFFSET_X/Y + logic*TFT_ZOOM 的映射。
+ *   所以准星/轨迹必须先用 tft_panel2logic_*() 换算，否则会"偏移 + 放大 2 倍"对不上手指。
+ *   页面同时显示两组读数：面板 X/Y（芯片原始值）与 逻辑 x/y（画布上看到的位置）。
  */
 static void touch_page_on_draw(ESGUI_MenuPage_T *page)
 {
@@ -92,16 +96,18 @@ static void touch_page_on_draw(ESGUI_MenuPage_T *page)
     int h = c->height;
     const int lh = ESGUI_DEFAULT_FONT.line_height;
 
-    /* 1) 40px 网格（判断坐标是否线性、有没有翻转/偏移） */
-    for (int x = 40; x < w; x += 40) {
-        eui_draw_vline(c, x, 0, h - 1, EUI_MODE_SET);
+    /* 1) 网格：按**面板坐标**每 40px 一条（线的位置由换算得到）
+     *    → 连线上的数字就是"手指所在面板坐标"，方便定量校验映射是否正确 */
+    for (int p = 40; p < TFT_SCREEN_W; p += 40) {
+        eui_draw_vline(c, tft_panel2logic_x(p), 0, h - 1, EUI_MODE_SET);
     }
-    for (int y = 40; y < h; y += 40) {
-        eui_draw_hline(c, 0, w - 1, y, EUI_MODE_SET);
+    for (int p = 40; p < TFT_SCREEN_H; p += 40) {
+        eui_draw_hline(c, 0, w - 1, tft_panel2logic_y(p), EUI_MODE_SET);
     }
+    /* 逻辑区边框（触点换算后必须落在这个框里） */
+    eui_draw_rect_stroke(c, 0, 0, w - 1, h - 1, EUI_MODE_SET);
 
-    /* 2) 采样与事件信息（先清一块底，避免和网格叠在一起看不清）
-     *    逻辑屏 112x128 → 7 行文字正好铺满上半屏（另一行留给底部提示） */
+    /* 2) 信息框（顶部 7 行） */
     char line[32];
     uint32_t ok = 0, err = 0;
     touch_input_get_stats(&ok, &err);
@@ -114,48 +120,63 @@ static void touch_page_on_draw(ESGUI_MenuPage_T *page)
     eui_draw_text(c, 3, 0 * lh, &ESGUI_DEFAULT_FONT, "触摸测试", EUI_MODE_SET);
 
     if (touch_last_valid) {
-        snprintf(line, sizeof(line), "X:%3u Y:%3u %u点", (unsigned)touch_last.x,
-                 (unsigned)touch_last.y, (unsigned)touch_last.fingers);
+        snprintf(line, sizeof(line), "面板 %3u,%3u", (unsigned)touch_last.x,
+                 (unsigned)touch_last.y);
     } else {
-        snprintf(line, sizeof(line), "X:--- Y:--- 等待");
+        snprintf(line, sizeof(line), "面板 ---,---");
     }
     eui_draw_text(c, 3, 1 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
+
+    if (touch_last_valid) {
+        snprintf(line, sizeof(line), "逻辑 %3d,%3d %u点",
+                 tft_panel2logic_x((int)touch_last.x),
+                 tft_panel2logic_y((int)touch_last.y), (unsigned)touch_last.fingers);
+    } else {
+        snprintf(line, sizeof(line), "逻辑 ---,--- 等待");
+    }
+    eui_draw_text(c, 3, 2 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
 
     snprintf(line, sizeof(line), "手势 %02X %s",
              touch_last_valid ? (unsigned)touch_last.gesture : 0u,
              touch_last_valid ? touch_gesture_name(touch_last.gesture) : "");
-    eui_draw_text(c, 3, 2 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
-
-    snprintf(line, sizeof(line), "点%lu 上%lu", (unsigned long)cnt_click,
-             (unsigned long)cnt_up);
     eui_draw_text(c, 3, 3 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
 
-    snprintf(line, sizeof(line), "下%lu 左%lu", (unsigned long)cnt_down,
-             (unsigned long)cnt_left);
+    snprintf(line, sizeof(line), "点%lu 上%lu 下%lu", (unsigned long)cnt_click,
+             (unsigned long)cnt_up, (unsigned long)cnt_down);
     eui_draw_text(c, 3, 4 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
 
-    snprintf(line, sizeof(line), "右%lu 长%lu", (unsigned long)cnt_right,
-             (unsigned long)cnt_back);
+    snprintf(line, sizeof(line), "左%lu 右%lu 长%lu", (unsigned long)cnt_left,
+             (unsigned long)cnt_right, (unsigned long)cnt_back);
     eui_draw_text(c, 3, 5 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
 
     snprintf(line, sizeof(line), "采样%lu 失败%lu", (unsigned long)ok, (unsigned long)err);
     eui_draw_text(c, 3, 6 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
 
-    /* 3) 轨迹点：最近 40 个不同位置的采样点（用反色小方块，压在网格上也看得清） */
+    /* 3) 竖线刻度（面板坐标，画在信息框下方；太密就每 80px 标一个） */
+    for (int p = 80; p < TFT_SCREEN_W; p += 80) {
+        char buf[8];
+        snprintf(buf, sizeof(buf), "%d", p);
+        eui_draw_text_clip(c, tft_panel2logic_x(p) + 1, box_h + 2,
+                           &ESGUI_DEFAULT_FONT, buf, EUI_MODE_SET, 28);
+    }
+
+    /* 4) 轨迹点：最近 40 个不同位置（逻辑坐标，反色小方块，压在网格上也看得清） */
     if (touch_last_valid && touch_last.fingers > 0) {
-        if (touch_last.x != touch_prev_x || touch_last.y != touch_prev_y) {
+        int lx = tft_panel2logic_x((int)touch_last.x);
+        int ly = tft_panel2logic_y((int)touch_last.y);
+        if (lx != touch_prev_x || ly != touch_prev_y) {
             if (trail_n < TOUCH_TRAIL_MAX) {
-                trail_x[trail_n] = touch_last.x;
-                trail_y[trail_n] = touch_last.y;
+                trail_x[trail_n] = (uint16_t)lx;
+                trail_y[trail_n] = (uint16_t)ly;
                 trail_n++;
             } else {
                 memmove(trail_x, trail_x + 1, sizeof(trail_x) - sizeof(trail_x[0]));
                 memmove(trail_y, trail_y + 1, sizeof(trail_y) - sizeof(trail_y[0]));
-                trail_x[TOUCH_TRAIL_MAX - 1] = touch_last.x;
-                trail_y[TOUCH_TRAIL_MAX - 1] = touch_last.y;
+                trail_x[TOUCH_TRAIL_MAX - 1] = (uint16_t)lx;
+                trail_y[TOUCH_TRAIL_MAX - 1] = (uint16_t)ly;
             }
-            touch_prev_x = touch_last.x;
-            touch_prev_y = touch_last.y;
+            touch_prev_x = (uint16_t)lx;
+            touch_prev_y = (uint16_t)ly;
         }
     }
     for (uint8_t i = 0; i < trail_n; i++) {
@@ -163,14 +184,18 @@ static void touch_page_on_draw(ESGUI_MenuPage_T *page)
                            trail_x[i] + 1, trail_y[i] + 1, EUI_MODE_XOR);
     }
 
-    /* 4) 十字准星（反色，十字线压在任何内容上都看得见） */
+    /* 5) 十字准星 + 实心中心点（反色，压在文字/网格上都看得见）
+     *    ★ 位置必须是"换算后的逻辑坐标"，与手指所指的屏幕位置一致 */
     if (touch_last_valid && touch_last.fingers > 0) {
-        eui_draw_hline(c, 0, w - 1, touch_last.y, EUI_MODE_XOR);
-        eui_draw_vline(c, touch_last.x, 0, h - 1, EUI_MODE_XOR);
-        eui_draw_circle_stroke(c, touch_last.x, touch_last.y, 6, EUI_MODE_XOR);
+        int lx = tft_panel2logic_x((int)touch_last.x);
+        int ly = tft_panel2logic_y((int)touch_last.y);
+        eui_draw_hline(c, 0, w - 1, ly, EUI_MODE_XOR);
+        eui_draw_vline(c, lx, 0, h - 1, EUI_MODE_XOR);
+        eui_draw_circle_stroke(c, lx, ly, 4, EUI_MODE_XOR);
+        eui_draw_rect_fill(c, lx, ly, lx, ly, EUI_MODE_SET);
     }
 
-    /* 5) 底部提示 */
+    /* 6) 底部提示 */
     eui_draw_text(c, 3, (int)(h - lh), &ESGUI_DEFAULT_FONT, "长按返回", EUI_MODE_SET);
 }
 

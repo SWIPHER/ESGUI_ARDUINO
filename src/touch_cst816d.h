@@ -22,7 +22,19 @@ extern "C" {
 #define TOUCH_I2C_ADDR  0x15        /* CST816D 7 位地址 */
 #define TOUCH_I2C_FREQ  400000      /* 400kHz（与板载 AXP2101/QMI8658/RTC 共用这条总线） */
 
-/* ===== ② 面板坐标范围（与 tft.setRotation(0) 一致，1:1 对得上）===== */
+/* ===== ② 面板坐标范围（与 tft.setRotation(0) 一致，1:1 对得上）
+ *  若实测"触摸方向与显示相反"（手指在左上，读数却在右下），把下面两个镜像开关置 1
+ *  即可——这是面板批次/贴合方向不同造成的常见现象，不用改其它代码：
+ *    TOUCH_MIRROR_X=1 → X 反向；TOUCH_MIRROR_Y=1 → Y 反向
+ *  只镜像"手指→度数"的方向：滑动方向判定会跟着一起变正确（因为都以面板坐标为准）。
+ *  本板（240x284 + 同向贴合）两个都保持 0。 */
+#ifndef TOUCH_MIRROR_X
+#define TOUCH_MIRROR_X  0
+#endif
+#ifndef TOUCH_MIRROR_Y
+#define TOUCH_MIRROR_Y  0
+#endif
+
 #define TOUCH_PANEL_W   240
 #define TOUCH_PANEL_H   284
 

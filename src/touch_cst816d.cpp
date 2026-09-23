@@ -107,6 +107,14 @@ bool touch_drv_read(touch_state_t *st)
     st->x = (uint16_t)(((uint16_t)(d[2] & 0x0F) << 8) | d[3]);   /* 12bit */
     st->y = (uint16_t)(((uint16_t)(d[4] & 0x0F) << 8) | d[5]);   /* 12bit */
 
+    /* 方向镜像（默认关）：只有发现"手指与读数方向相反"时才在头文件里打开 */
+#if TOUCH_MIRROR_X
+    st->x = (uint16_t)((TOUCH_PANEL_W - 1) - st->x);
+#endif
+#if TOUCH_MIRROR_Y
+    st->y = (uint16_t)((TOUCH_PANEL_H - 1) - st->y);
+#endif
+
     /* fingers==0 时 x/y 可能是锁存的最后位置（抬手瞬间还能用来算"甩动"），
      * 上层只在 fingers>0 时把它当"当前触点"用，抬手判定见 §1.8。 */
     return true;
