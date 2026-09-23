@@ -59,7 +59,96 @@ VS Code 里直接用 PlatformIO 插件的 Build / Upload / Monitor 也可以。
 | 左右滑动 | `EVT_KEY_LEFT / EVT_KEY_RIGHT` | 与上下同义（列表页）/ 左右选值 |
 | 长按 600ms | `EVT_KEY_BACK` | 返回上一页 / 关闭弹窗 |
 
-阈值都在 `src/touch_input.c` 头部（`TOUCH_STEP_PX` / `TOUCH_SWIPE_MIN_PX` / `TOUCH_LONG_PRESS_MS`）。
+阈值都在 `src/touch_input.c` 头部（`TOUCH_STEP_PX` / `TOUCH_SWIPE_MIN_PX` / `TOUCH_LONG_PRESS_MS`）；
+**改手感、改帧率的方法见下面的《调参指南》。**
+
+## 调参指南：显示帧率 / 触摸灵敏度
+
+### 一、显示帧率
+
+ESGUI 不是"固定帧率刷屏"，而是 **节拍（Tick）+ 按需重绘**：只有动画页（有 `anim` 在跑）或
+请求过 `ACT_REFRESH` 的页面才整帧重绘，静态页面几乎不刷屏。所以分三层看：
+
+#### 1) 节拍频率（决定帧率上限 & 输入延迟）
+
+| 位置 | 当前值 | 说明 |
+| --- | --- | --- |
+| `src/esgui_port.c:129` | `>= 10`（ms） | **单线程模式**下每 10ms 才 `ESGUI_Tick()` 一次 → 100Hz 上限 |
+| `src/esgui_port.c:34` | `PORT_USE_UI_TASK 0` | 改成 `1`：UI 跑在 core0 独立任务，`loop()` 只做触摸（推荐，见下文"跟手度"） |
+| `src/esgui_port.c:83` | `vTaskDelay(pdMS_TO_TICKS(10))` | **独立任务模式**下 UI 任务自己的节拍 |
+| `src/main.cpp:29` | `delay(2)` | `loop()` 周期：单线程模式下决定触摸采样率，独立任务模式下只影响触摸采样 |
+
+* 更顺 / 更跟手：`10` → `5`（200Hz 上限）
+* 更省电 / 降 CPU：`10` → `16`（≈60Hz）或 `20`
+
+#### 2) 单帧耗时（真正的瓶颈）
+
+每帧要送 `224×256×2 = 114,688` 字节 RGB565（逻辑区放大后的实际显示区）：
+
+| 手段 | 位置 | 效果 |
+| --- | --- | --- |
+| **提高 SPI 时钟（收益最大）** | `lib/TFT_eSPI-2.5.43/User_Setup.h:49` `SPI_FREQUENCY 40000000` → `80000000` | 40MHz ≈ 23ms/帧（≈43fps）→ 80MHz ≈ 11.5ms/帧（≈87fps）；出现花屏/噪点就退回 40M |
+| 减少 SPI 事务次数 | `src/tft_drv.h:73` `ESGUI_STRIP_H 32` → `64`，**同时**把 `src/tft_drv.cpp:30` 的 `> 32 ? 32 :` 上限一起改大（否则缓冲仍是 32 行，白改） | 条带 32→64 行：每帧 `pushImage` 次数减半；缓冲 28KB → 57KB（内部 RAM 够用） |
+| 整帧一次推送（最顺、无撕裂） | `src/tft_drv.h:82` `TFT_USE_FRAME_BUF 1`，并把 `ESGUI_STRIP_H` 设为 `ESGUI_LOGIC_H` | 整帧放 PSRAM（114KB）一次 `pushImage`；需要板子有 PSRAM |
+| 减少像素总量 | `src/tft_drv.h:46` `TFT_ZOOM 2` → `1`（逻辑改 `224×264`） | 画面更大、字变小；每帧字节数与现在相当 |
+| 缩短动画时长（主观"更快"，不是帧率） | `platformio.ini` 追加 `-DESGUI_PAGE_TRANSITION_ANIM_TIME=200`（默认 350ms，见 `ESGUI_DefaultConfig.h:194`）；弹窗滑入的 400ms 写死在 `ESGUI_PageDefaltVtbl.c` | 页面切换 / 弹窗进出更快 |
+
+> 推荐组合：`SPI_FREQUENCY 80M` + `ESGUI_STRIP_H 64`（含 `tft_drv.cpp:30` 上限）+ `PORT_USE_UI_TASK 1`。
+
+#### 3) 实测当前帧率
+
+进「覆盖层」页面看底部的 **`帧%lu`** 计数器（每绘制一帧 +1），秒表数 1 秒涨多少 ≈ 实际 fps；
+也可以临时在 `test_draw_page.c` 的 `draw_frame()` 里加一行 `Serial.println(millis())` 打时间戳。
+
+### 二、触摸灵敏度
+
+手感参数全在 **`src/touch_input.c` 第 19~26 行**（4 个宏在 23~26 行；文件头就写着"想调手感就改这里"）：
+
+| 参数 | 当前值 | 调**小**的效果 | 调**大**的效果 |
+| --- | --- | --- | --- |
+| `TOUCH_STEP_PX` | `32` | 更灵敏（划一点就翻行，一行菜单 36px） | 更迟钝（要划更长才翻一行） |
+| `TOUCH_SWIPE_MIN_PX` | `30` | 更容易判定成"滑动" | 更难判定成滑动（轻点更"安全"） |
+| `TOUCH_LONG_PRESS_MS` | `600` | 长按更快触发（返回） | 长按更难误触 |
+| `TOUCH_EVT_QUEUE` | `8` | 一次快速甩动翻的格数变少 | 一次甩动可翻更多格 |
+
+常见诉求对应改法：
+
+* **太钝 / 划好几下才动一行** → `TOUCH_STEP_PX 32 → 22`、`TOUCH_SWIPE_MIN_PX 30 → 20`
+* **太灵 / 手指一放就乱跳** → `TOUCH_STEP_PX 32 → 40`、`TOUCH_SWIPE_MIN_PX 30 → 36`
+* **返回老被误触** → `TOUCH_LONG_PRESS_MS 600 → 800`
+
+> 这些阈值是**屏幕像素**，与 UI 放大倍数绑定：改过 `tft_drv.h` 的 `TFT_ZOOM` 后，要同步把
+> `TOUCH_STEP_PX` 设成"≈ 一行菜单的像素高"。
+
+#### 跟手度（最容易被忽略的点）
+
+单线程模式（`PORT_USE_UI_TASK 0`）下整帧绘制就在 `loop()` 里做：一帧 23ms 意味着这一帧期间
+只采到一次触摸，于是"滑动轨迹很粗、容易丢格"。三种解法（任选其一）：
+
+1. **`src/esgui_port.c:34` 改成 `PORT_USE_UI_TASK 1`（推荐）**：触摸仍留在 `loop()`（≈2ms 一次），
+   UI 在 core0 独立任务里绘制 → 滑动立刻跟手；
+2. 保持单线程但缩短单帧：提高 `SPI_FREQUENCY`、加大 `ESGUI_STRIP_H`（见上面帧率表）；
+3. 只把 `src/main.cpp:29` 的 `delay(2)` 改成 `delay(1)`——提升有限，瓶颈是整帧绘制。
+
+> 平台层为了保证"快速连滑每一格都生效"，在两次真实事件之间插了一个 `EVT_NONE`
+> （见 `esgui_port.c` 的注释），代价是**事件输出速率 = 轮询率 ÷ 2**。想更快请用方案 1，
+> 不要直接把这个间隔删掉（会被下面的框架节流丢掉）。
+
+#### 框架层的"同向按键节流"（滑动/连按被吃掉时看这里）
+
+* `lib/ESGUI/ESGUI_Menu.c:22`：`repeat_delay_ms = 300`（初始值）
+* `lib/ESGUI/ESGUI.c:174`：同方向事件在该时间内**直接丢弃**；`:178` 每成功处理一次 −40ms（最低 50ms）；
+  `:199` 未产生动作时重置回 300
+
+本工程在平台层插了 `EVT_NONE` 复位 `last_event`，正常情况下不会误丢；若你改了投递逻辑或改用
+编码器输入，可以把 300 调小、把 −40 调大。
+
+#### 硬件层（一般不用动）
+
+* **自动休眠**：`src/touch_cst816d.cpp` 的 `TOUCH_DISABLE_AUTO_SLEEP`（写 `0xFE=1`）——
+  "过一会儿点不动"的根治点；
+* **I2C 速率**：`src/touch_cst816d.h` 的 `TOUCH_I2C_FREQ 400000`；
+  若触摸页的"失败"计数一直涨，可降到 `100000` 增强抗干扰。
 
 ## 首页 → 测试项对照
 
@@ -126,7 +215,8 @@ tools/
 **5. 内容还是贴到圆角上** → 把安全边距放大：减小 `ESGUI_LOGIC_W/H`（例如 104x120），
 `TFT_OFFSET_X/Y` 会自动重新居中；或直接在 `tft_drv.h` 里手填偏移。
 
-**6. 滑动一格跳两行** → 改 `src/touch_input.c` 的 `TOUCH_STEP_PX`（现在 32 ≈ 一行 36px 高）。
+**6. 滑动一格跳两行** → 改 `src/touch_input.c` 的 `TOUCH_STEP_PX`（现在 32 ≈ 一行 36px 高），
+或见上文《调参指南》二、触摸灵敏度（含"跟手度"为什么不佳的说明）。
 
 ## 写测试页时的三个框架要点（实测踩到）
 
