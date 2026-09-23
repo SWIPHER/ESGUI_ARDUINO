@@ -24,7 +24,7 @@
 #include "tft_drv.h"            /* ESGUI_LOGIC_W（跑道长度跟着逻辑屏宽走） */
 
 /* ==================== 缓动曲线表 ====================
- * 名称都用 2 个汉字：菜单条目右侧的"当前值"只有半屏宽可用（逻辑屏 112 宽）。 */
+ * 名称都用 2 个汉字：菜单条目右侧的"当前值"只有半屏宽可用（逻辑屏 216 宽）。 */
 static const struct {
     const char      *name;
     anim_path_type_t type;
@@ -95,8 +95,8 @@ static void ov_play(void)
 }
 
 /* ==================== 覆盖层绘制 ====================
- * 逻辑屏 112x128：把"跑道 + 方块 + 曲线名"画在屏幕底部，先清一条底色带，
- * 避免和菜单文字混在一起。
+ * 逻辑屏 216x272、行高 33：把"跑道 + 方块 + 曲线名"画在屏幕底部，
+ * 先清一条底色带，避免和菜单文字混在一起。
  */
 static void ov_on_draw(ESGUI_Overlay_T *ov)
 {
@@ -106,37 +106,38 @@ static void ov_on_draw(ESGUI_Overlay_T *ov)
 
     int w = c->width;
     int h = c->height;
-    int track_len = w - 16;                     /* 跑道长度 */
-    int y = h - 22;                             /* 方块所在行 */
+    const int lh = ESGUI_DEFAULT_FONT.line_height;
+    int track_len = w - 32;                     /* 跑道长度 */
+    int y = h - 40;                             /* 方块所在行 */
     int x = ov_box_x;
     if (x > track_len) x = track_len;
     if (x < 0) x = 0;
 
-    /* 底色带（清掉菜单文字，覆盖层信息才看得清） */
-    eui_draw_rect_fill(c, 0, y - 16, w - 1, h - 1, EUI_MODE_CLER);
+    /* 底色带（清掉菜单文字，覆盖层信息才看得清）：文字行 + 跑道行 */
+    eui_draw_rect_fill(c, 0, y - lh - 6, w - 1, h - 1, EUI_MODE_CLER);
 
     /* 跑道底座 + 起点/终点刻度 */
-    eui_draw_hline(c, 8, 8 + track_len, y + 12, EUI_MODE_SET);
-    eui_draw_vline(c, 8, y + 8, y + 15, EUI_MODE_SET);
-    eui_draw_vline(c, 8 + track_len, y + 8, y + 15, EUI_MODE_SET);
+    eui_draw_hline(c, 16, 16 + track_len, y + 22, EUI_MODE_SET);
+    eui_draw_vline(c, 16, y + 16, y + 28, EUI_MODE_SET);
+    eui_draw_vline(c, 16 + track_len, y + 16, y + 28, EUI_MODE_SET);
 
     /* 正在移动的方块（压在什么内容上都看得清） */
-    eui_draw_rect_stroke(c, 8 + x, y, 8 + x + 9, y + 9, EUI_MODE_SET);
-    eui_draw_rect_fill(c, 8 + x + 3, y + 3, 8 + x + 6, y + 6, EUI_MODE_SET);
+    eui_draw_rect_stroke(c, 16 + x, y, 16 + x + 17, y + 17, EUI_MODE_SET);
+    eui_draw_rect_fill(c, 16 + x + 6, y + 6, 16 + x + 11, y + 11, EUI_MODE_SET);
 
     /* 覆盖层信息：曲线名 + 已刷帧数（帧数一直涨就说明 always_dirty 生效了） */
-    char buf[32];
+    char buf[40];
     ov_frame++;
-    snprintf(buf, sizeof(buf), "曲线%s 帧%lu", s_curves[ov_curve].name,
+    snprintf(buf, sizeof(buf), "曲线%s %lu", s_curves[ov_curve].name,
              (unsigned long)ov_frame);
-    eui_draw_text(c, 2, y - 16, &ESGUI_DEFAULT_FONT, buf, EUI_MODE_SET);
+    eui_draw_text(c, 6, y - lh - 4, &ESGUI_DEFAULT_FONT, buf, EUI_MODE_SET);
 }
 
 /* ==================== 条目回调 ==================== */
 
 static ESGUI_MenuAction_T ov_show_msg(const char *msg)
 {
-    ESGUI_DefaultMessagePopWindowCreate(&ov_msg_popup, msg, 112, 56, 1);
+    ESGUI_DefaultMessagePopWindowCreate(&ov_msg_popup, msg, 216, 110, 1);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &ov_msg_popup};
 }
 

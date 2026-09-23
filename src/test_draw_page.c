@@ -110,11 +110,17 @@ static void draw_start_pulse(void)
     anim_start(&a);
 }
 
-/* ==================== 小工具 ====================
- * 逻辑屏 112x128：标题占第 0 行、正文 18~110、底部提示固定在最下面一行。
+/* ==================== 布局常量（全部按字体行高表达，换字号不用改这里） ====================
+ * 逻辑屏 216x272、字（真·30px 字库）行高 33：
+ *   第 0 行 = 标题；分隔线在 y=33；正文 = [TOP, 239]；最后一行（239..271）留给底部提示。
+ *   CELL = 68：一个"图形 + 标注"单元（上半行画图形、下半行写标注）。
  */
-#define DRAW_TOP        18                      /* 正文起始 y */
-#define DRAW_BOTTOM     (ESGUI_DEFAULT_FONT.line_height)
+#define LH          (ESGUI_DEFAULT_FONT.line_height)    /* 33 */
+#define TOP         (LH + 2)                            /* 35 正文起点 */
+#define CELL        ((LH) * 2 + 2)                      /* 68 单元高 */
+#define CELL_Y(r)   (TOP + (r) * (CELL))                /* 单元 r 的 y：35 / 103 / 171 */
+#define CELL_H      (LH - 2)                            /* 31 单元内图形高度 */
+#define COL3(w, i)  (8 + (i) * (((w) - 16) / 3))        /* 三列布局的 x */
 
 static Canvas *draw_canvas(ESGUI_MenuPage_T *page)
 {
@@ -148,135 +154,150 @@ static void draw_frame(ESGUI_MenuPage_T *page, Canvas *c, const char *hint)
     (void)page;
 }
 
-/* ==================== 各个图案（坐标全部按逻辑屏 112x128 走） ==================== */
+/* ==================== 各个图案（坐标全部按逻辑屏 216x272 + 行高 33 走） ==================== */
 
 static void pat_basic(Canvas *c)
 {
     int w = c->width;
-    eui_draw_hline(c, 4, w - 5, DRAW_TOP, EUI_MODE_SET);               /* 横线 */
-    eui_draw_vline(c, 6, DRAW_TOP + 6, 68, EUI_MODE_SET);              /* 竖线 */
-    eui_draw_line(c, 12, DRAW_TOP + 4, w - 6, 68, EUI_MODE_SET);       /* 斜线 */
 
-    /* XOR 画两遍 = 抵消（第二遍把第一遍擦掉，屏幕上看不到） */
-    eui_draw_line(c, 12, 76, w - 6, 76, EUI_MODE_XOR);
-    eui_draw_line(c, 12, 76, w - 6, 76, EUI_MODE_XOR);
-    /* XOR 画一遍 = 反色线 */
-    eui_draw_line(c, 12, 84, w - 6, 84, EUI_MODE_XOR);
+    /* 单元 0：横线 / 竖线 / 斜线 */
+    eui_draw_hline(c, 8, w - 9, TOP + 4, EUI_MODE_SET);
+    eui_draw_vline(c, 16, TOP + 8, CELL_Y(0) + CELL_H, EUI_MODE_SET);
+    eui_draw_line(c, 32, TOP + 8, w - 12, CELL_Y(0) + CELL_H, EUI_MODE_SET);
+    draw_label(c, 8, CELL_Y(0) + LH, "横线 竖线 斜线");
 
-    /* CLEAR：在实心块上"擦"出一条线 */
-    eui_draw_rect_fill(c, 6, 92, w - 7, 108, EUI_MODE_SET);
-    eui_draw_hline(c, 6, w - 7, 100, EUI_MODE_CLER);
+    /* 单元 1：XOR 画两遍 = 抵消（应看不见）；画一遍 = 反色 */
+    eui_draw_line(c, 8, CELL_Y(1) + 8, w - 9, CELL_Y(1) + 8, EUI_MODE_XOR);
+    eui_draw_line(c, 8, CELL_Y(1) + 8, w - 9, CELL_Y(1) + 8, EUI_MODE_XOR);
+    eui_draw_line(c, 8, CELL_Y(1) + 22, w - 9, CELL_Y(1) + 22, EUI_MODE_XOR);
+    draw_label(c, 8, CELL_Y(1) + LH, "XOR 抵消/反色");
 
-    /* 点阵 */
-    for (int i = 0; i < 14; i++) {
-        eui_draw_pixel(c, 6 + i * 7, 112, EUI_MODE_SET);
-    }
+    /* 单元 2：实心块里用 CLEAR 擦一条线 */
+    eui_draw_rect_fill(c, 8, CELL_Y(2), w - 9, CELL_Y(2) + CELL_H, EUI_MODE_SET);
+    eui_draw_hline(c, 8, w - 9, CELL_Y(2) + 15, EUI_MODE_CLER);
+    draw_label(c, 8, CELL_Y(2) + LH, "CLEAR 擦除");
 }
 
 static void pat_rect(Canvas *c)
 {
     int w = c->width;
-    eui_draw_rect_fill(c, 4, DRAW_TOP, 32, DRAW_TOP + 22, EUI_MODE_SET);
-    draw_label(c, 8, DRAW_TOP + 24, "填充");
-    eui_draw_rect_stroke(c, 40, DRAW_TOP, 68, DRAW_TOP + 22, EUI_MODE_SET);
-    draw_label(c, 42, DRAW_TOP + 24, "描边");
-    eui_draw_rect_box(c, 76, DRAW_TOP, w - 5, DRAW_TOP + 22, EUI_MODE_SET);
-    draw_label(c, 82, DRAW_TOP + 24, "框");
+    int cw = (w - 16) / 3;
 
-    /* XOR 叠加：重叠部分反色 */
-    eui_draw_rect_fill(c, 4, 62, 60, 88, EUI_MODE_SET);
-    eui_draw_rect_fill(c, 30, 72, 90, 98, EUI_MODE_XOR);
-    draw_label(c, 4, 100, "XOR叠加 反色");
+    /* 单元 0：填充 / 描边 / 框 */
+    eui_draw_rect_fill(c, 8, TOP + 2, 8 + cw - 10, TOP + 2 + CELL_H, EUI_MODE_SET);
+    eui_draw_rect_stroke(c, 8 + cw, TOP + 2, 8 + 2 * cw - 10, TOP + 2 + CELL_H, EUI_MODE_SET);
+    eui_draw_rect_box(c, 8 + 2 * cw, TOP + 2, w - 9, TOP + 2 + CELL_H, EUI_MODE_SET);
+    draw_label(c, 8, CELL_Y(0) + LH, "填充 描边 框");
 
-    /* CLEAR：从实心块里抠一个矩形 */
-    eui_draw_rect_fill(c, 76, 62, w - 5, 108, EUI_MODE_SET);
-    eui_draw_rect_stroke(c, 84, 72, w - 13, 98, EUI_MODE_CLER);
+    /* 单元 1：XOR 叠加（重叠处反色） */
+    eui_draw_rect_fill(c, 8, CELL_Y(1) + 2, w / 2 + 20, CELL_Y(1) + 2 + CELL_H, EUI_MODE_SET);
+    eui_draw_rect_fill(c, w / 2 - 20, CELL_Y(1) + 2, w - 9, CELL_Y(1) + 2 + CELL_H, EUI_MODE_XOR);
+    draw_label(c, 8, CELL_Y(1) + LH, "XOR 叠加");
+
+    /* 单元 2：CLEAR 从实心块里抠一个框 */
+    eui_draw_rect_fill(c, 8, CELL_Y(2), w - 9, CELL_Y(2) + CELL_H, EUI_MODE_SET);
+    eui_draw_rect_stroke(c, 30, CELL_Y(2) + 6, w - 31, CELL_Y(2) + CELL_H - 6, EUI_MODE_CLER);
+    draw_label(c, 8, CELL_Y(2) + LH, "CLEAR 抠图");
 }
 
 static void pat_circle(Canvas *c)
 {
-    eui_draw_circle_fill(c, 18, DRAW_TOP + 14, 11, EUI_MODE_SET);
-    draw_label(c, 6, DRAW_TOP + 26, "填充");
-    eui_draw_circle_stroke(c, 56, DRAW_TOP + 14, 11, EUI_MODE_SET);
-    draw_label(c, 44, DRAW_TOP + 26, "描边");
-    eui_draw_circle_box(c, 94, DRAW_TOP + 14, 10, EUI_MODE_SET);
-    draw_label(c, 84, DRAW_TOP + 26, "框");
+    int w = c->width;
+    int r = CELL_H / 2;                             /* 15 */
 
-    /* 两个 XOR 圆环相交：交集处反色 */
-    eui_draw_circle_stroke(c, 36, 82, 18, EUI_MODE_XOR);
-    eui_draw_circle_stroke(c, 64, 82, 18, EUI_MODE_XOR);
+    /* 单元 0：填充 / 描边 / 框 */
+    eui_draw_circle_fill(c, 8 + r, TOP + r, r, EUI_MODE_SET);
+    eui_draw_circle_stroke(c, w / 2, TOP + r, r, EUI_MODE_SET);
+    eui_draw_circle_box(c, w - 9 - r, TOP + r, r - 2, EUI_MODE_SET);
+    draw_label(c, 8, CELL_Y(0) + LH, "填充 描边 框");
 
-    /* 同心圆 */
-    for (int r = 3; r <= 15; r += 4) {
-        eui_draw_circle_stroke(c, 96, 86, r, EUI_MODE_SET);
+    /* 单元 1：两个 XOR 圆环相交（交集反色） */
+    eui_draw_circle_stroke(c, w / 2 - 34, CELL_Y(1) + r, r + 12, EUI_MODE_XOR);
+    eui_draw_circle_stroke(c, w / 2 + 34, CELL_Y(1) + r, r + 12, EUI_MODE_XOR);
+    draw_label(c, 8, CELL_Y(1) + LH, "XOR 圆环相交");
+
+    /* 单元 2：同心圆 */
+    for (int rr = 4; rr <= r; rr += 5) {
+        eui_draw_circle_stroke(c, 8 + 2 * r, CELL_Y(2) + r, rr, EUI_MODE_SET);
     }
+    draw_label(c, 8, CELL_Y(2) + LH, "同心圆");
 }
 
 static void pat_triangle(Canvas *c)
 {
     int w = c->width;
-    eui_draw_triangle_fill(c, 6, DRAW_TOP + 24, 22, DRAW_TOP, 38, DRAW_TOP + 24, EUI_MODE_SET);
-    draw_label(c, 10, DRAW_TOP + 26, "填充");
-    eui_draw_triangle_stroke(c, 46, DRAW_TOP + 24, 62, DRAW_TOP, 78, DRAW_TOP + 24, EUI_MODE_SET);
-    draw_label(c, 50, DRAW_TOP + 26, "描边");
-    eui_draw_triangle_box(c, 86, DRAW_TOP + 24, 100, DRAW_TOP, w - 5, DRAW_TOP + 24, EUI_MODE_SET);
-    draw_label(c, 88, DRAW_TOP + 26, "框");
 
-    /* XOR 三角形叠在一起 */
-    eui_draw_triangle_fill(c, 10, 104, 46, 58, 82, 104, EUI_MODE_XOR);
-    eui_draw_triangle_fill(c, 44, 104, 80, 58, w - 6, 104, EUI_MODE_SET);
+    /* 单元 0：填充 / 描边 / 框 */
+    eui_draw_triangle_fill(c, 8, TOP + CELL_H, 46, TOP, 84, TOP + CELL_H, EUI_MODE_SET);
+    eui_draw_triangle_stroke(c, 92, TOP + CELL_H, 130, TOP, 168, TOP + CELL_H, EUI_MODE_SET);
+    eui_draw_triangle_box(c, 176, TOP + CELL_H, 200, TOP, w - 9, TOP + CELL_H, EUI_MODE_SET);
+    draw_label(c, 8, CELL_Y(0) + LH, "填充 描边 框");
+
+    /* 单元 1：先 XOR 再 SET 叠加（看交集效果） */
+    eui_draw_triangle_fill(c, 8, CELL_Y(1) + CELL_H, 84, CELL_Y(1), 160, CELL_Y(1) + CELL_H,
+                           EUI_MODE_XOR);
+    eui_draw_triangle_fill(c, 56, CELL_Y(1) + CELL_H, 132, CELL_Y(1), w - 9, CELL_Y(1) + CELL_H,
+                           EUI_MODE_SET);
+    draw_label(c, 8, CELL_Y(1) + LH, "XOR 与 SET");
+
+    /* 单元 2：倒三角 + 内部 XOR 小三角 */
+    eui_draw_triangle_stroke(c, 8, CELL_Y(2), 70, CELL_Y(2) + CELL_H, 132, CELL_Y(2), EUI_MODE_SET);
+    eui_draw_triangle_fill(c, 50, CELL_Y(2) + 6, 96, CELL_Y(2) + CELL_H - 6, 142, CELL_Y(2) + 6,
+                           EUI_MODE_XOR);
+    draw_label(c, 8, CELL_Y(2) + LH, "倒三角内 XOR");
 }
 
 static void pat_round(Canvas *c)
 {
     int w = c->width;
-    eui_draw_round_rect_fill(c, 4, DRAW_TOP, 52, DRAW_TOP + 26, 6, EUI_MODE_SET);
-    draw_label(c, 6, DRAW_TOP + 28, "圆角填充r6");
-    eui_draw_round_rect_stroke(c, 60, DRAW_TOP, w - 5, DRAW_TOP + 26, 6, EUI_MODE_SET);
-    draw_label(c, 62, DRAW_TOP + 28, "描边r6");
 
-    eui_draw_round_rect_box(c, 4, 64, 52, 92, 10, EUI_MODE_SET);
-    draw_label(c, 6, 94, "框r10");
-    eui_draw_round_rect_fill(c, 60, 64, w - 5, 92, 2, EUI_MODE_SET);
-    draw_label(c, 62, 94, "小圆角r2");
+    /* 单元 0：圆角填充（小圆角）/ 圆角描边（中）/ 圆角框（大） */
+    eui_draw_round_rect_fill(c, 8, TOP, 72, TOP + CELL_H, 3, EUI_MODE_SET);
+    eui_draw_round_rect_stroke(c, 84, TOP, 148, TOP + CELL_H, 10, EUI_MODE_SET);
+    eui_draw_round_rect_box(c, 160, TOP, w - 9, TOP + CELL_H, 15, EUI_MODE_SET);
+    draw_label(c, 8, CELL_Y(0) + LH, "圆角 3 / 10 / 15");
 
-    /* XOR 叠加：验证圆角处也走同一条绘制路径 */
-    eui_draw_round_rect_fill(c, 16, 100, 72, 116, 8, EUI_MODE_SET);
-    eui_draw_round_rect_fill(c, 44, 100, w - 6, 116, 8, EUI_MODE_XOR);
+    /* 单元 1：XOR 叠加圆角矩形 */
+    eui_draw_round_rect_fill(c, 8, CELL_Y(1) + 2, 120, CELL_Y(1) + 2 + CELL_H, 16, EUI_MODE_SET);
+    eui_draw_round_rect_fill(c, 60, CELL_Y(1) + 2, w - 9, CELL_Y(1) + 2 + CELL_H, 16,
+                             EUI_MODE_XOR);
+    draw_label(c, 8, CELL_Y(1) + LH, "XOR 叠加圆角矩形");
+
+    /* 单元 2：大圆角填充（看圆角处的像素台阶） */
+    eui_draw_round_rect_fill(c, 8, CELL_Y(2), w - 9, CELL_Y(2) + CELL_H, 30, EUI_MODE_SET);
+    eui_draw_rect_fill(c, w / 2 - 20, CELL_Y(2) + 8, w / 2 + 20, CELL_Y(2) + CELL_H - 8,
+                       EUI_MODE_CLER);
+    draw_label(c, 8, CELL_Y(2) + LH, "大圆角 r30");
 }
 
 static void pat_bitmap(Canvas *c)
 {
     int w = c->width;
-    /* 普通绘制：位图不透明，直接覆盖 */
-    eui_draw_bitmap(c, 4, DRAW_TOP, &tst_icon_settings, 1);
-    /* 反色绘制 */
-    eui_draw_bitmap_invert(c, 40, DRAW_TOP, &tst_icon_music);
-    /* 透明：先铺实心块，再用 transparent 只画"1 像素"（0 像素透明）→ 挖空效果 */
-    eui_draw_rect_fill(c, 76, DRAW_TOP, 76 + 31, DRAW_TOP + 31, EUI_MODE_SET);
-    eui_draw_bitmap_transparent(c, 76, DRAW_TOP, &tst_icon_heart, 0, 0);
-    draw_label(c, 4, DRAW_TOP + 33, "普通 反色 挖空");
 
-    /* 缩略图（24x24，图片列表弹窗里用的那套） */
-    eui_draw_bitmap(c, 4, 60, &tst_small_star, 1);
-    eui_draw_bitmap(c, 32, 60, &tst_small_wifi, 1);
-    eui_draw_bitmap(c, 60, 60, &tst_small_folder, 1);
-    /* 透明（只画 0 像素：把形状的"负空间"填实） */
-    eui_draw_rect_fill(c, 88, 60, 88 + 23, 60 + 23, EUI_MODE_SET);
-    eui_draw_bitmap_transparent(c, 88, 60, &tst_small_heart, 0, 1);
+    /* 第一行：64x64 图标 —— 普通 / 反色 / 透明（先铺实心块再"只画 1 像素"→ 挖空） */
+    eui_draw_bitmap(c, 8, TOP, &tst_icon_settings, 1);
+    eui_draw_bitmap_invert(c, 80, TOP, &tst_icon_music);
+    eui_draw_rect_fill(c, 152, TOP, w - 9, TOP + 63, EUI_MODE_SET);
+    eui_draw_bitmap_transparent(c, 152, TOP, &tst_icon_heart, 0, 0);
 
-    /* GIF 动图：本页有脉冲动画 → 每 tick 重绘，帧才会推进 */
-    ESGUI_GIFDraw(c, &draw_gif, 4, 90, EUI_MODE_SET, anim_get_tick(),
-                  ESGUI_GIF_PLAY_LOOP);
+    /* 第二行：40x40 缩略图 + 透明（只画 0 像素 = 负空间填实） */
+    int y2 = TOP + 68;
+    eui_draw_bitmap(c, 8, y2, &tst_small_star, 1);
+    eui_draw_bitmap(c, 56, y2, &tst_small_wifi, 1);
+    eui_draw_bitmap(c, 104, y2, &tst_small_folder, 1);
+    eui_draw_rect_fill(c, 152, y2, 191, y2 + 39, EUI_MODE_SET);
+    eui_draw_bitmap_transparent(c, 152, y2, &tst_small_heart, 0, 1);
+
+    /* 第三行：GIF 动图（本页有脉冲动画 → 每帧重绘，帧才会推进） */
+    int y3 = TOP + 115;
+    ESGUI_GIFDraw(c, &draw_gif, 8, y3, EUI_MODE_SET, anim_get_tick(), ESGUI_GIF_PLAY_LOOP);
+    ESGUI_GIFDraw(c, &draw_gif, 80, y3, EUI_MODE_SET, anim_get_tick(), ESGUI_GIF_PLAY_LOOP);
     {
         char buf[16];
         snprintf(buf, sizeof(buf), "GIF %u/%u",
                  (unsigned)(draw_gif.frame + 1), (unsigned)draw_gif.frame_count);
-        draw_label(c, 40, 96, buf);
+        draw_label(c, 152, y3 + 16, buf);
     }
-    /* 位图裁剪：故意画到屏幕外，验证越界不会画花 */
-    eui_draw_bitmap(c, -14, 90, &tst_icon_star, 1);
-    eui_draw_bitmap(c, w - 18, 90, &tst_icon_star, 1);
 }
 
 static void pat_widget(Canvas *c)
@@ -284,53 +305,50 @@ static void pat_widget(Canvas *c)
     int w = c->width;
     (void)w;
 
-    /* 可变长度横向进度条：右 / 左 两种方向 */
-    ESGUI_WidgetProgrssBarChangeLenPermille(c, 4, DRAW_TOP, 6, 80, 250,
+    /* 三条横向进度条（右 / 左 / 右），长度 150 */
+    ESGUI_WidgetProgrssBarChangeLenPermille(c, 8, TOP + 2, 6, 150, 250,
                                             ESGUI_WIDGET_PROGBAR_RIGHT);
-    ESGUI_WidgetProgrssBarChangeLenPermille(c, 4, DRAW_TOP + 12, 6, 80, 700,
+    ESGUI_WidgetProgrssBarChangeLenPermille(c, 8, TOP + 2 + LH, 6, 150, 700,
                                             ESGUI_WIDGET_PROGBAR_LEFT);
-    ESGUI_WidgetProgrssBarChangeLenPermille(c, 4, DRAW_TOP + 24, 6, 80, 1000,
+    ESGUI_WidgetProgrssBarChangeLenPermille(c, 8, TOP + 2 + 2 * LH, 6, 150, 1000,
                                             ESGUI_WIDGET_PROGBAR_RIGHT);
-    draw_label(c, 88, DRAW_TOP + 4, "250");
-    draw_label(c, 88, DRAW_TOP + 16, "700");
-    draw_label(c, 88, DRAW_TOP + 28, "1000");
+    draw_label(c, 170, TOP + 4, "250");
+    draw_label(c, 170, TOP + 4 + LH, "700");
+    draw_label(c, 170, TOP + 4 + 2 * LH, "1000");
 
-    /* 复选框：方形（未选/选中）、圆形（未选/选中） */
-    ESGUI_WidgetCheckBoxSquare(c, 6, 62, 14, 14, false);
-    ESGUI_WidgetCheckBoxSquare(c, 28, 62, 14, 14, true);
-    ESGUI_WidgetCheckBoxRound(c, 60, 69, 7, false);
-    ESGUI_WidgetCheckBoxRound(c, 82, 69, 7, true);
-    draw_label(c, 4, 78, "复选框 方/圆");
+    /* 复选框：方（未选/选中）、圆（未选/选中） */
+    int cy = TOP + 3 * LH + 6;
+    ESGUI_WidgetCheckBoxSquare(c, 8, cy, 28, 28, false);
+    ESGUI_WidgetCheckBoxSquare(c, 52, cy, 28, 28, true);
+    ESGUI_WidgetCheckBoxRound(c, 116, cy + 14, 14, false);
+    ESGUI_WidgetCheckBoxRound(c, 168, cy + 14, 14, true);
+    draw_label(c, 8, cy + LH, "复选框 方/圆");
 
-    /* 焦点框：位图焦点框（四角）、动画焦点框（可生长）、文本焦点框（XOR 圆角） */
-    ESGUI_WidgetBmpFocusBox(c, 4, 82, 26, 12);
-    ESGUI_WidgetBmpFocusBoxAnim(c, 36, 82, 40, 12);
-    draw_label(c, 80, 84, "焦点框");
-    ESGUI_WidgetTextFocusBox(c, 4, 96, 14, 60);
-    draw_label(c, 70, 96, "文本");
+    /* 焦点框：文本焦点框（XOR 圆角）+ 位图焦点框（四角） */
+    int fy = cy + LH + LH;
+    ESGUI_WidgetTextFocusBox(c, 8, fy - 4, LH - 2, 90);
+    draw_label(c, 106, fy - 4, "焦点框");
+    ESGUI_WidgetBmpFocusBox(c, 8, fy + LH, 40, 26);
+    ESGUI_WidgetBmpFocusBoxAnim(c, 60, fy + LH, 60, 26);
 }
 
 static void pat_font(Canvas *c)
 {
-    /* ASCII 表：每行 14 个字符（字宽约 8px），6 行画完 0x20~0x73
-     * （逻辑屏 112x128，正文区高 92px，正好 6 行） */
+    /* ASCII 表：每行 12 个字符（30px 字宽 15~19px），6 行 = 72 个字符（0x20~0x67） */
     char line[16];
-    int n = 0;
-    int row = 0;
-    const int lh = ESGUI_DEFAULT_FONT.line_height;
-    for (int ch = 0x20; ch <= 0x73; ch++) {
+    int n = 0, row = 0;
+    for (int ch = 0x20; ch <= 0x67; ch++) {
         line[n++] = (char)ch;
-        if (n == 14) {
+        if (n == 12) {
             line[n] = '\0';
-            eui_draw_text(c, 2, DRAW_TOP + row * lh, &ESGUI_DEFAULT_FONT, line,
-                          EUI_MODE_SET);
+            eui_draw_text(c, 8, TOP + row * LH, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
             n = 0;
             row++;
         }
     }
     if (n > 0) {
         line[n] = '\0';
-        eui_draw_text(c, 2, DRAW_TOP + row * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
+        eui_draw_text(c, 8, TOP + row * LH, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
     }
 }
 
@@ -339,11 +357,11 @@ static void pat_palette(Canvas *c)
     /* 本图案在 on_draw 里把 g_pal_cb 指向彩条回调 → 整屏按行换色（8 条色带） */
     char buf[8];
     for (int i = 0; i < 8; i++) {
-        int y0 = DRAW_TOP + i * 11;
-        eui_draw_rect_fill(c, 3, y0, 50, y0 + 8, EUI_MODE_SET);
-        eui_draw_rect_stroke(c, 56, y0, 90, y0 + 8, EUI_MODE_SET);
+        int y0 = TOP + i * 25;
+        eui_draw_rect_fill(c, 8, y0, 90, y0 + 20, EUI_MODE_SET);
+        eui_draw_rect_stroke(c, 100, y0, 170, y0 + 20, EUI_MODE_SET);
         snprintf(buf, sizeof(buf), "%d", i + 1);
-        eui_draw_text(c, 98, y0, &ESGUI_DEFAULT_FONT, buf, EUI_MODE_SET);
+        eui_draw_text(c, 186, y0 - 4, &ESGUI_DEFAULT_FONT, buf, EUI_MODE_SET);
     }
 }
 
@@ -352,23 +370,24 @@ static void pat_align(Canvas *c)
     int w = c->width;
     int h = c->height;
 
-    /* 1px 边框 + 四角 4x4 实心块：判断画面有没有行列偏移、有没有被面板圆角切到 */
+    /* 1px 边框 + 四角 8x8 实心块：判断画面有没有行列偏移、有没有被面板圆角切到 */
     eui_draw_rect_stroke(c, 0, 0, w - 1, h - 1, EUI_MODE_SET);
-    eui_draw_rect_fill(c, 0, 0, 3, 3, EUI_MODE_SET);
-    eui_draw_rect_fill(c, w - 4, 0, w - 1, 3, EUI_MODE_SET);
-    eui_draw_rect_fill(c, 0, h - 4, 3, h - 1, EUI_MODE_SET);
-    eui_draw_rect_fill(c, w - 4, h - 4, w - 1, h - 1, EUI_MODE_SET);
+    eui_draw_rect_fill(c, 0, 0, 7, 7, EUI_MODE_SET);
+    eui_draw_rect_fill(c, w - 8, 0, w - 1, 7, EUI_MODE_SET);
+    eui_draw_rect_fill(c, 0, h - 8, 7, h - 1, EUI_MODE_SET);
+    eui_draw_rect_fill(c, w - 8, h - 8, w - 1, h - 1, EUI_MODE_SET);
 
     /* 中心十字 */
-    eui_draw_hline(c, w / 2 - 10, w / 2 + 10, 64, EUI_MODE_SET);
-    eui_draw_vline(c, w / 2, 54, 74, EUI_MODE_SET);
+    eui_draw_hline(c, w / 2 - 20, w / 2 + 20, h / 2, EUI_MODE_SET);
+    eui_draw_vline(c, w / 2, h / 2 - 20, h / 2 + 20, EUI_MODE_SET);
 
-    /* 每 20px 一层网格 */
-    for (int x = 20; x < w; x += 20) eui_draw_vline(c, x, 20, 96, EUI_MODE_SET);
-    for (int y = 20; y <= 96; y += 20) eui_draw_hline(c, 0, w - 1, y, EUI_MODE_SET);
+    /* 每 40px 一层网格 */
+    for (int x = 40; x < w; x += 40) eui_draw_vline(c, x, 40, h - 40, EUI_MODE_SET);
+    for (int y = 40; y < h; y += 40) eui_draw_hline(c, 0, w - 1, y, EUI_MODE_SET);
 
     /* 每 2px 一条 1px 竖线：能看出来就说明"列没丢、没被缩放" */
-    for (int x = 0; x < w; x += 2) eui_draw_vline(c, x, 100, 108, EUI_MODE_SET);
+    for (int x = 0; x < w; x += 2) eui_draw_vline(c, x, 200, 214, EUI_MODE_SET);
+    draw_label(c, 8, 216, "1px 竖条");
 }
 
 static void pat_dither(Canvas *c)
@@ -377,64 +396,68 @@ static void pat_dither(Canvas *c)
 
     /* 5 档"灰阶"：每个 8px 单元里点亮的竖条数从 1 到 5 */
     for (int k = 1; k <= 5; k++) {
-        int y0 = DRAW_TOP + (k - 1) * 13;
-        for (int x = 2; x < w - 24; x += 8) {
+        int y0 = TOP + (k - 1) * 30;
+        for (int x = 8; x < w - 44; x += 8) {
             for (int i = 0; i < k; i++) {
-                eui_draw_vline(c, x + i, y0, y0 + 10, EUI_MODE_SET);
+                eui_draw_vline(c, x + i, y0, y0 + 24, EUI_MODE_SET);
             }
         }
         char buf[8];
         snprintf(buf, sizeof(buf), "%d", k);
-        eui_draw_text(c, w - 16, y0, &ESGUI_DEFAULT_FONT, buf, EUI_MODE_SET);
+        eui_draw_text(c, w - 30, y0, &ESGUI_DEFAULT_FONT, buf, EUI_MODE_SET);
     }
 
     /* 棋盘格：1px / 2px / 4px 三种格子（看摩尔纹与像素对齐） */
-    int by = 88;
-    for (int y = 0; y < 20; y++) {
-        for (int x = 0; x < 32; x++) {
-            if (((x >> 0) + (y >> 0)) & 1) eui_draw_pixel(c, 2 + x, by + y, EUI_MODE_SET);
+    int by = TOP + 152;
+    for (int y = 0; y < 26; y++) {
+        for (int x = 0; x < 48; x++) {
+            if (((x >> 0) + (y >> 0)) & 1) eui_draw_pixel(c, 8 + x, by + y, EUI_MODE_SET);
         }
     }
-    for (int y = 0; y < 20; y++) {
-        for (int x = 0; x < 32; x++) {
-            if (((x >> 1) + (y >> 1)) & 1) eui_draw_pixel(c, 40 + x, by + y, EUI_MODE_SET);
+    for (int y = 0; y < 26; y++) {
+        for (int x = 0; x < 48; x++) {
+            if (((x >> 1) + (y >> 1)) & 1) eui_draw_pixel(c, 68 + x, by + y, EUI_MODE_SET);
         }
     }
-    for (int y = 0; y < 20; y++) {
-        for (int x = 0; x < 32; x++) {
-            if (((x >> 2) + (y >> 2)) & 1) eui_draw_pixel(c, 78 + x, by + y, EUI_MODE_SET);
+    for (int y = 0; y < 26; y++) {
+        for (int x = 0; x < 48; x++) {
+            if (((x >> 2) + (y >> 2)) & 1) eui_draw_pixel(c, 128 + x, by + y, EUI_MODE_SET);
         }
     }
-    draw_label(c, 4, by + 22, "棋盘格 1/2/4px");
+    draw_label(c, 8, by + 28, "棋盘格");
 }
 
 static void pat_direct(Canvas *c)
 {
     /* 真正的显示自检在 on_input 里执行（直写屏、阻塞 4~5 秒）；
      * 这里只解释一下，避免用户以为卡住了。 */
-    const int lh = ESGUI_DEFAULT_FONT.line_height;
-    eui_draw_text(c, 3, DRAW_TOP,        &ESGUI_DEFAULT_FONT, "进入本图案会", EUI_MODE_SET);
-    eui_draw_text(c, 3, DRAW_TOP + lh,   &ESGUI_DEFAULT_FONT, "自动直写屏自检:", EUI_MODE_SET);
-    eui_draw_text(c, 3, DRAW_TOP + 2 * lh, &ESGUI_DEFAULT_FONT, "1 单色轮播", EUI_MODE_SET);
-    eui_draw_text(c, 3, DRAW_TOP + 3 * lh, &ESGUI_DEFAULT_FONT, "2 RGB 竖条", EUI_MODE_SET);
-    eui_draw_text(c, 3, DRAW_TOP + 4 * lh, &ESGUI_DEFAULT_FONT, "3 三色渐变", EUI_MODE_SET);
-    eui_draw_text(c, 3, DRAW_TOP + 5 * lh, &ESGUI_DEFAULT_FONT, "4 边框+棋盘", EUI_MODE_SET);
+    const char *lines[] = {
+        "进入本图案会",
+        "直写屏自检:",
+        "1 单色轮播",
+        "2 RGB 竖条",
+        "3 三色渐变",
+        "4 边框/棋盘",
+    };
+    for (int i = 0; i < 6; i++) {
+        eui_draw_text(c, 8, TOP + i * LH, &ESGUI_DEFAULT_FONT, lines[i], EUI_MODE_SET);
+    }
 }
 
 static void pat_mask(Canvas *c)
 {
     /* 满屏内容 + 逐级过渡遮罩：看到的是交错扫描线动画（页面切换的退出效果） */
-    for (int y = DRAW_TOP; y < c->height - 20; y += 4) {
-        eui_draw_hline(c, 2, c->width - 6, y, EUI_MODE_SET);
+    for (int y = TOP; y < c->height - 40; y += 6) {
+        eui_draw_hline(c, 8, c->width - 12, y, EUI_MODE_SET);
     }
-    eui_draw_rect_fill(c, 30, 60, 80, 96, EUI_MODE_SET);
+    eui_draw_rect_fill(c, 40, TOP + 30, 160, TOP + 120, EUI_MODE_SET);
 
     eui_uint8_t lvl = (eui_uint8_t)((anim_get_tick() / 5) % 9);
     canvas_apply_transition_mask(c, lvl);
 
     char buf[24];
     snprintf(buf, sizeof(buf), "遮罩级别 %u/8", (unsigned)lvl);
-    draw_label(c, 3, 96, buf);
+    draw_label(c, 8, 200, buf);
 }
 
 /* ==================== 页面虚函数实现 ==================== */

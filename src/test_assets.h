@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-/* ---- 32x32 图标（BMP 菜单条目） ---- */
+/* ---- 48x48 图标（BMP 菜单条目） ---- */
 extern const Bitmap tst_icon_settings;
 extern const Bitmap tst_icon_music;
 extern const Bitmap tst_icon_folder;
@@ -21,7 +21,7 @@ extern const Bitmap tst_icon_heart;
 extern const Bitmap tst_icon_star;
 extern const Bitmap tst_icon_wifi;
 
-/* ---- 24x24 缩略图标（BMP 列表弹窗条目） ---- */
+/* ---- 40x40 缩略图标（BMP 列表弹窗条目） ---- */
 extern const Bitmap tst_small_settings;
 extern const Bitmap tst_small_music;
 extern const Bitmap tst_small_folder;

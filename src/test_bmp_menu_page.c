@@ -26,7 +26,7 @@ static ESGUI_PopWindow_T bmp_msg_popup;
 static ESGUI_MenuAction_T bmp_show_msg(const char *msg)
 {
     /* 弹窗只保存消息**指针**，不拷贝文本 → 必须传常驻字符串（字面量/静态缓冲） */
-    ESGUI_DefaultMessagePopWindowCreate(&bmp_msg_popup, msg, 112, 56, 1);
+    ESGUI_DefaultMessagePopWindowCreate(&bmp_msg_popup, msg, 216, 110, 1);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &bmp_msg_popup};
 }
 
@@ -47,7 +47,7 @@ static ESGUI_MenuAction_T bmp_enter_gif_list_popup(ESGUI_MenuPage_T *page, void 
 /* 条目表：5 个图标条目（其中 1 个动图，label 末尾 "\x03/7" 标记为 GIF）
  *      + 3 个"图片列表弹窗"入口（BMP 菜单只画位图，所以也给了图标，
  *        焦点落在它们上时底部标签会显示名字，不会认错）
- * 逻辑屏 112 宽 ≈ 8 个汉字；图标 32x32，一屏能看到 2~3 个（横向轮播）*/
+ * 逻辑屏 216 宽 ≈ 7 个汉字；图标 48x48，一屏能看到 3~4 个（横向轮播）*/
 static ESGUI_MenuItem_T bmp_items[] = {
     {0, 0, "设置",       &tst_icon_settings, bmp_item_enter, (void *)"设置(齿轮)"},
     {0, 0, "音乐",       &tst_icon_music,    bmp_item_enter, (void *)"音乐(音符)"},
@@ -95,8 +95,8 @@ static ESGUI_MenuAction_T bmp_enter_list_popup(ESGUI_MenuPage_T *page, void *arg
 {
     (void)page;
     if ((int)(intptr_t)arg == 0) {
-        /* 普通版：短标题，弹窗小巧（逻辑屏 112x128，弹窗按 112x92 给） */
-        ESGUI_DefaultBMPListPopWindowCreate(&bmp_list_popup, "图标", 112, 92,
+        /* 普通版：短标题，弹窗按 216x200 给（逻辑屏 216x272） */
+        ESGUI_DefaultBMPListPopWindowCreate(&bmp_list_popup, "图标", 216, 200,
                                             bmp_list_items,
                                             ESGUI_ITEM_NUM_COUNT(bmp_list_items));
     } else {
@@ -104,7 +104,7 @@ static ESGUI_MenuAction_T bmp_enter_list_popup(ESGUI_MenuPage_T *page, void *arg
         ESGUI_DefaultBMPListScrollTitlePopWindowCreate(
             &bmp_list_popup,
             "滚动标题:标题超宽时自动横向滚动",
-            112, 100, bmp_list_items, ESGUI_ITEM_NUM_COUNT(bmp_list_items));
+            216, 210, bmp_list_items, ESGUI_ITEM_NUM_COUNT(bmp_list_items));
     }
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &bmp_list_popup};
 }
@@ -115,7 +115,7 @@ static ESGUI_MenuAction_T bmp_enter_gif_list_popup(ESGUI_MenuPage_T *page, void 
     (void)arg;
     ESGUI_GIFInit(&bmp_list_gif, tst_gif_frames, TST_GIF_FRAME_COUNT,
                   tst_gif_delays, 0, 0);
-    ESGUI_DefaultBMPListPopWindowCreate(&bmp_list_popup, "含动图", 112, 92,
+    ESGUI_DefaultBMPListPopWindowCreate(&bmp_list_popup, "含动图", 216, 200,
                                         bmp_list_gif_items,
                                         ESGUI_ITEM_NUM_COUNT(bmp_list_gif_items));
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &bmp_list_popup};

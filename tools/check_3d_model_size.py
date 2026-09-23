@@ -11,13 +11,13 @@
 """
 import sys
 
-# 本工程当前参数（与 platformio.ini / src/tft_drv.h 一致）
-PBW = 2            # -DESGUI_PROGRESS_BAR_W=2
-FONT_H = 15        # eui_test_font.line_height
-CANVAS_H = 128     # ESGUI_LOGIC_H
-FOCUS_MARGIN = 10  # -DESGUI_3D_MENU_FOCUS_MARGIN=10
-ITEM_GAP = 8       # -DESGUI_3D_MENU_ITEM_GAP=8
-ZOOM = 2           # src/tft_drv.h 的 TFT_ZOOM
+# 本工程当前参数（与 platformio.ini / src/tft_drv.h / 字库一致）
+PBW = 4            # -DESGUI_PROGRESS_BAR_W=4
+FONT_H = 33        # src/font_big.c 的 line_height（真·30px 字库）
+CANVAS_H = 272     # ESGUI_LOGIC_H
+FOCUS_MARGIN = 20  # -DESGUI_3D_MENU_FOCUS_MARGIN（未覆盖时用框架默认 20）
+ITEM_GAP = 16      # -DESGUI_3D_MENU_ITEM_GAP=16
+ZOOM = 1           # src/tft_drv.h 的 TFT_ZOOM（1:1）
 
 DEFAULT_PCT = 65   # 框架默认 ESGUI_3D_MENU_MODEL_SCALE
 

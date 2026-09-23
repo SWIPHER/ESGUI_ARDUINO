@@ -24,9 +24,9 @@ import sys
 OUT_C = os.path.join(os.path.dirname(__file__), "..", "src", "test_assets.c")
 OUT_H = os.path.join(os.path.dirname(__file__), "..", "src", "test_assets.h")
 
-BIG = 32          # BMP 菜单图标尺寸（逻辑像素；屏幕上是 BIG*TFT_ZOOM）
-SMALL = 24        # 列表弹窗图标尺寸
-GIF_SIZE = 32     # 动图帧尺寸
+BIG = 48          # BMP 菜单图标尺寸（面板像素；1:1 映射，直接就是屏上尺寸）
+SMALL = 40        # 列表弹窗图标尺寸
+GIF_SIZE = 48     # 动图帧尺寸
 GIF_FRAMES = 12   # 动图帧数
 
 

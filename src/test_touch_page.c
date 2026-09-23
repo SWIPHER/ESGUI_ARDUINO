@@ -81,7 +81,7 @@ static const char *touch_gesture_name(uint8_t g)
 }
 
 /* ==================== 绘制 ====================
- * ★ 关键：触摸芯片报的是**面板像素**（0..239 / 0..283），而这里是**逻辑画布**（112x128），
+ * ★ 关键：触摸芯片报的是**面板像素**（0..239 / 0..283），而这里是**逻辑画布**（216x272），
  *   驱动送屏时会做 panel = TFT_OFFSET_X/Y + logic*TFT_ZOOM 的映射。
  *   所以准星/轨迹必须先用 tft_panel2logic_*() 换算，否则会"偏移 + 放大 2 倍"对不上手指。
  *   页面同时显示两组读数：面板 X/Y（芯片原始值）与 逻辑 x/y（画布上看到的位置）。
@@ -107,17 +107,21 @@ static void touch_page_on_draw(ESGUI_MenuPage_T *page)
     /* 逻辑区边框（触点换算后必须落在这个框里） */
     eui_draw_rect_stroke(c, 0, 0, w - 1, h - 1, EUI_MODE_SET);
 
-    /* 2) 信息框（顶部 7 行） */
-    char line[32];
+    /* 2) 信息框（顶部 6 行；逻辑屏 216x272、行高 33） */
+    char line[40];
     uint32_t ok = 0, err = 0;
     touch_input_get_stats(&ok, &err);
     touch_last_valid = touch_input_get_last(&touch_last);
 
-    int box_h = 7 * lh + 2;
+    int box_h = 6 * lh + 2;
     eui_draw_rect_fill(c, 1, 1, w - 2, box_h, EUI_MODE_CLER);
     eui_draw_rect_stroke(c, 1, 1, w - 2, box_h, EUI_MODE_SET);
 
-    eui_draw_text(c, 3, 0 * lh, &ESGUI_DEFAULT_FONT, "触摸测试", EUI_MODE_SET);
+    eui_draw_text(c, 6, 0 * lh, &ESGUI_DEFAULT_FONT, "触摸测试", EUI_MODE_SET);
+
+    /* 标题行右侧：采样成功数（I2C 通信质量） */
+    snprintf(line, sizeof(line), "采%lu", (unsigned long)ok);
+    eui_draw_text_clip(c, 160, 0 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET, 50);
 
     if (touch_last_valid) {
         snprintf(line, sizeof(line), "面板 %3u,%3u", (unsigned)touch_last.x,
@@ -125,39 +129,36 @@ static void touch_page_on_draw(ESGUI_MenuPage_T *page)
     } else {
         snprintf(line, sizeof(line), "面板 ---,---");
     }
-    eui_draw_text(c, 3, 1 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
+    eui_draw_text(c, 6, 1 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
 
     if (touch_last_valid) {
-        snprintf(line, sizeof(line), "逻辑 %3d,%3d %u点",
+        snprintf(line, sizeof(line), "逻辑 %3d,%3d  %u点",
                  tft_panel2logic_x((int)touch_last.x),
                  tft_panel2logic_y((int)touch_last.y), (unsigned)touch_last.fingers);
     } else {
         snprintf(line, sizeof(line), "逻辑 ---,--- 等待");
     }
-    eui_draw_text(c, 3, 2 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
+    eui_draw_text(c, 6, 2 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
 
     snprintf(line, sizeof(line), "手势 %02X %s",
              touch_last_valid ? (unsigned)touch_last.gesture : 0u,
              touch_last_valid ? touch_gesture_name(touch_last.gesture) : "");
-    eui_draw_text(c, 3, 3 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
+    eui_draw_text(c, 6, 3 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
 
     snprintf(line, sizeof(line), "点%lu 上%lu 下%lu", (unsigned long)cnt_click,
              (unsigned long)cnt_up, (unsigned long)cnt_down);
-    eui_draw_text(c, 3, 4 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
+    eui_draw_text(c, 6, 4 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
 
-    snprintf(line, sizeof(line), "左%lu 右%lu 长%lu", (unsigned long)cnt_left,
-             (unsigned long)cnt_right, (unsigned long)cnt_back);
-    eui_draw_text(c, 3, 5 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
+    snprintf(line, sizeof(line), "左%lu 右%lu 失%lu", (unsigned long)cnt_left,
+             (unsigned long)cnt_right, (unsigned long)err);
+    eui_draw_text(c, 6, 5 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
 
-    snprintf(line, sizeof(line), "采样%lu 失败%lu", (unsigned long)ok, (unsigned long)err);
-    eui_draw_text(c, 3, 6 * lh, &ESGUI_DEFAULT_FONT, line, EUI_MODE_SET);
-
-    /* 3) 竖线刻度（面板坐标，画在信息框下方；太密就每 80px 标一个） */
-    for (int p = 80; p < TFT_SCREEN_W; p += 80) {
+    /* 3) 竖线刻度（面板坐标，画在信息框下方） */
+    for (int p = 40; p < TFT_SCREEN_W; p += 40) {
         char buf[8];
         snprintf(buf, sizeof(buf), "%d", p);
-        eui_draw_text_clip(c, tft_panel2logic_x(p) + 1, box_h + 2,
-                           &ESGUI_DEFAULT_FONT, buf, EUI_MODE_SET, 28);
+        eui_draw_text_clip(c, tft_panel2logic_x(p) + 2, box_h + 4,
+                           &ESGUI_DEFAULT_FONT, buf, EUI_MODE_SET, 44);
     }
 
     /* 4) 轨迹点：最近 40 个不同位置（逻辑坐标，反色小方块，压在网格上也看得清） */
@@ -180,8 +181,8 @@ static void touch_page_on_draw(ESGUI_MenuPage_T *page)
         }
     }
     for (uint8_t i = 0; i < trail_n; i++) {
-        eui_draw_rect_fill(c, trail_x[i] - 1, trail_y[i] - 1,
-                           trail_x[i] + 1, trail_y[i] + 1, EUI_MODE_XOR);
+        eui_draw_rect_fill(c, trail_x[i] - 2, trail_y[i] - 2,
+                           trail_x[i] + 2, trail_y[i] + 2, EUI_MODE_XOR);
     }
 
     /* 5) 十字准星 + 实心中心点（反色，压在文字/网格上都看得见）
@@ -191,8 +192,8 @@ static void touch_page_on_draw(ESGUI_MenuPage_T *page)
         int ly = tft_panel2logic_y((int)touch_last.y);
         eui_draw_hline(c, 0, w - 1, ly, EUI_MODE_XOR);
         eui_draw_vline(c, lx, 0, h - 1, EUI_MODE_XOR);
-        eui_draw_circle_stroke(c, lx, ly, 4, EUI_MODE_XOR);
-        eui_draw_rect_fill(c, lx, ly, lx, ly, EUI_MODE_SET);
+        eui_draw_circle_stroke(c, lx, ly, 8, EUI_MODE_XOR);
+        eui_draw_rect_fill(c, lx - 1, ly - 1, lx + 1, ly + 1, EUI_MODE_SET);
     }
 
     /* 6) 底部提示 */

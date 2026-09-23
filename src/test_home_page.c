@@ -64,7 +64,7 @@ ENTER_WRAP(enter_overlay, test_overlay_page_create)
 
 /* ==================== 系统信息页（自定义绘制 + 自定义输入） ====================
  * 页面 item_num = 0（不走菜单条目机制），on_draw 自己排文本行。
- * 逻辑屏只有 112x128（约 8 个汉字/行、7 行），所以信息拆成 2 页：
+ * 逻辑屏 216x272（约 7 个汉字/行、8 行），所以信息拆成 2 页：
  * 轻点/滑动翻页，长按返回。
  * on_page_chenge 留空 → 进出页面不跑过渡动画，返回是"立即生效"的。
  */
@@ -104,8 +104,8 @@ static void about_page_draw(ESGUI_MenuPage_T *page)
         ABOUT_LINE("主频 %d MHz", (int)CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ);
         ABOUT_LINE("内核 %d 个", (int)chip.cores);
         ABOUT_LINE("RAM 余 %luK", (unsigned long)(esp_get_free_heap_size() / 1024));
-        ABOUT_LINE("PSRAM 余 %luK",
-                   (unsigned long)(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024));
+        ABOUT_LINE("PSRAM 余 %luM",
+                   (unsigned long)(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / (1024 * 1024)));
         ABOUT_LINE("Flash %lu MB", (unsigned long)(flash_size / (1024 * 1024)));
     } else {
         ABOUT_LINE("系统信息 2/2");
@@ -120,7 +120,7 @@ static void about_page_draw(ESGUI_MenuPage_T *page)
     /* 底部提示（最后一行） */
     line = (eui_uint8_t)((canvas->height - lh) / lh);
     eui_draw_text(canvas, 2, (int)line * lh, &ESGUI_DEFAULT_FONT,
-                  "轻点翻页 长按退", EUI_MODE_SET);
+                  "点翻页 长按退", EUI_MODE_SET);
 
     #undef ABOUT_LINE
 }
@@ -164,7 +164,7 @@ static ESGUI_MenuAction_T enter_about(ESGUI_MenuPage_T *page, void *arg)
 }
 
 /* ==================== 首页条目表 ====================
- * 逻辑屏 112 宽 ≈ 8 个汉字/行：标签写得短一些；一屏 6 条，9 条会自动滚动。 */
+ * 逻辑屏 216 宽 ≈ 7 个汉字/行：一屏 6 条，9 条会自动滚动。 */
 static ESGUI_MenuItem_T home_items[] = {
     {0, 0, "文本菜单", ESGUI_NULL, enter_text_menu, ESGUI_NULL},
     {0, 0, "图形菜单", ESGUI_NULL, enter_bmp_menu,  ESGUI_NULL},

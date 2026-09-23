@@ -37,7 +37,7 @@ static ESGUI_PopWindow_T edit_msg_popup;
 
 static ESGUI_MenuAction_T edit_show_msg(const char *msg)
 {
-    ESGUI_DefaultMessagePopWindowCreate(&edit_msg_popup, msg, 112, 56, 1);
+    ESGUI_DefaultMessagePopWindowCreate(&edit_msg_popup, msg, 216, 110, 1);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &edit_msg_popup};
 }
 
@@ -100,9 +100,9 @@ static ESGUI_MenuAction_T edit_enter_keyboard(ESGUI_MenuPage_T *page, void *arg)
 {
     (void)page;
     (void)arg;
-    /* 键盘弹窗 112x100：键高 16（见 platformio.ini 的 ESGUI_KEY_BOARD_KEY_H），
-     * 字母页 4 行 = 64px、数字页 5 行 = 80px，加输入框 19px 都放得下 */
-    ESGUI_DefaultKeyBoardPopWindowCreate(&edit_kb_popup, 112, 100,
+    /* 键盘弹窗 216x222：键高 36（platformio.ini 的 ESGUI_KEY_BOARD_KEY_H），
+     * 字母页 4 行 = 144px、数字页 5 行 = 180px，加输入框 37px 正好 */
+    ESGUI_DefaultKeyBoardPopWindowCreate(&edit_kb_popup, 216, 222,
                                          edit_text, sizeof(edit_text), edit_text);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &edit_kb_popup};
 }
@@ -127,7 +127,7 @@ static ESGUI_MenuAction_T edit_enter_look(ESGUI_MenuPage_T *page, void *arg)
     snprintf(view, sizeof(view), "单行文本:\n%s\n\n多行文本:\n%s",
              edit_text[0] ? edit_text : "(空)",
              edit_ml_work[0] ? edit_ml_work : "(空)");
-    ESGUI_DefaultMessageLongTextPopWindowCreate(&edit_msg_popup, view, 112, 110);
+    ESGUI_DefaultMessageLongTextPopWindowCreate(&edit_msg_popup, view, 216, 230);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &edit_msg_popup};
 }
 

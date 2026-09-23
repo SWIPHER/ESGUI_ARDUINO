@@ -41,11 +41,11 @@ static ESGUI_PopWindow_T text_value_popup;
 
 /* 统一弹消息的小工具（返回 ACT_SHOW_POPUP，调用处直接 return 它）
  * 注意：① 消息弹窗**只保存字符串指针**，所以文本必须是字面量或静态缓冲；
- *       ② 逻辑屏只有 112 宽（≈8 个汉字/行），消息按 2 行、每行 ≤8 个汉字来写；
+ *       ② 逻辑屏 216 宽（≈7 个汉字/行），消息按 2 行、每行 ≤7 个汉字来写；
  *       ③ 字库里没有全角标点（：（）等），一律用 ASCII 标点。 */
 static ESGUI_MenuAction_T text_show_msg(const char *msg)
 {
-    ESGUI_DefaultMessagePopWindowCreate(&text_msg_popup, msg, 112, 56, 1);
+    ESGUI_DefaultMessagePopWindowCreate(&text_msg_popup, msg, 216, 110, 1);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &text_msg_popup};
 }
 
@@ -145,9 +145,9 @@ static ESGUI_MenuAction_T text_enter_plain(ESGUI_MenuPage_T *page, void *arg)
 static ESGUI_MenuAction_T text_enter_edit_text(ESGUI_MenuPage_T *page, void *arg)
 {
     (void)page;
-    /* 键盘弹窗 112x100：键高 16，字母页 4 行 = 64px、数字页 5 行 = 80px，
-     * 加输入框 19px 后都放得下（逻辑屏只有 112x128，这是能给的尺寸） */
-    ESGUI_DefaultKeyBoardPopWindowCreate(&text_kb_popup, 112, 100,
+    /* 键盘弹窗 216x222：键高 36 → 字母页 4 行 = 144px、数字页 5 行 = 180px，
+     * 加输入框 37px 后都放得下（逻辑屏 216x272） */
+    ESGUI_DefaultKeyBoardPopWindowCreate(&text_kb_popup, 216, 222,
                                          text_value, sizeof(text_value), text_value);
     (void)arg;
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &text_kb_popup};
@@ -157,7 +157,7 @@ static ESGUI_MenuAction_T text_enter_edit_number(ESGUI_MenuPage_T *page, void *a
 {
     (void)page;
     (void)arg;
-    ESGUI_DefaultValuePopWindowCreate(&text_value_popup, "值修改 0-100", 112, 56,
+    ESGUI_DefaultValuePopWindowCreate(&text_value_popup, "值修改 0-100", 216, 110,
                                       &text_number_desc);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &text_value_popup};
 }
@@ -232,7 +232,7 @@ static const esgui_page_vtable_t text_page_vtable = {
 ESGUI_MenuAction_T test_text_menu_page_create(void)
 {
     /* 固定条目（每次进入都重建，保证新增过的条目被清掉）
-     * 标签按"逻辑屏 112 宽 ≈ 8 个汉字"来写；太长的条目会自动横向滚动（本身就是测试项） */
+     * 标签按"逻辑屏 216 宽 ≈ 7 个汉字"来写；太长的条目会自动横向滚动（本身就是测试项） */
     text_items[0] = (ESGUI_MenuItem_T){0, 0, "普通条目", ESGUI_NULL,
                                        text_enter_plain, ESGUI_NULL};
     text_items[1] = (ESGUI_MenuItem_T){0, 0, "无回调条目", ESGUI_NULL,
@@ -278,7 +278,7 @@ static ESGUI_PopWindow_T dyn_msg_popup;
 
 static ESGUI_MenuAction_T dyn_show_msg(const char *msg)
 {
-    ESGUI_DefaultMessagePopWindowCreate(&dyn_msg_popup, msg, 112, 56, 1);
+    ESGUI_DefaultMessagePopWindowCreate(&dyn_msg_popup, msg, 216, 110, 1);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &dyn_msg_popup};
 }
 

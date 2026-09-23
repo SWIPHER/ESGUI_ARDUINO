@@ -80,7 +80,7 @@ static const ESGUI_ValueDesc_T pop_value_desc = {
     .step         = pop_value_step,
 };
 
-/* ---- 文本列表弹窗条目（逻辑屏 112 宽，一行 ≈8 个汉字）---- */
+/* ---- 文本列表弹窗条目（逻辑屏 216 宽，一行 ≈7 个汉字）---- */
 static ESGUI_MenuItem_T pop_text_items[] = {
     {0, 0, "列表项 1", ESGUI_NULL, ESGUI_NULL, ESGUI_NULL},
     {0, 0, "列表项 2", ESGUI_NULL, ESGUI_NULL, ESGUI_NULL},
@@ -121,7 +121,7 @@ static ESGUI_MenuAction_T stack3_enter(ESGUI_MenuPage_T *page, void *arg)
 {
     (void)page;
     (void)arg;
-    ESGUI_DefaultMessagePopWindowCreate(&popup_s3, "第3层弹窗\n点确定逐层退", 112, 56, 1);
+    ESGUI_DefaultMessagePopWindowCreate(&popup_s3, "第3层弹窗\n点确定逐层退", 216, 110, 1);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &popup_s3};
 }
 
@@ -135,7 +135,7 @@ static ESGUI_MenuAction_T stack2_enter(ESGUI_MenuPage_T *page, void *arg)
 {
     (void)page;
     (void)arg;
-    ESGUI_DefaultTextListScrollTitlePopWindowCreate(&popup_s2, "第2层弹窗", 112, 92,
+    ESGUI_DefaultTextListScrollTitlePopWindowCreate(&popup_s2, "第2层弹窗", 216, 200,
                                                     stack2_items,
                                                     ESGUI_ITEM_NUM_COUNT(stack2_items));
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &popup_s2};
@@ -148,7 +148,7 @@ static ESGUI_MenuItem_T stack1_items[] = {
 };
 
 /* ==================== 单层弹窗分发器 ====================
- * 逻辑屏 112x128，弹窗尺寸按下面的经验值给：
+ * 逻辑屏 216x272（字行高 33），弹窗尺寸按下面的经验值给：
  *   消息/布尔/值（含滚动标题版）: 112x56   文本列表 / 图片列表: 112x92
  *   键盘: 112x100                          长文本: 112x110
  */
@@ -157,59 +157,59 @@ static ESGUI_MenuAction_T popup_dispatch(int idx)
     switch (idx) {
         case POP_MSG:
             ESGUI_DefaultMessagePopWindowCreate(&popup_a,
-                "消息弹窗\n点确定关闭", 112, 56, 1);
+                "消息弹窗\n点确定关闭", 216, 110, 1);
             break;
 
         case POP_MSG_NOBTN:
             ESGUI_DefaultMessagePopWindowCreate(&popup_a,
-                "消息弹窗\n无按钮版", 112, 56, 0);
+                "消息弹窗\n无按钮版", 216, 110, 0);
             break;
 
         case POP_MSG_SCROLL:
             ESGUI_DefaultMessageScrollTitlePopWindowCreate(&popup_a,
                 "滚动标题消息弹窗:标题太长时自动横向循环滚动",
-                112, 56, 1);
+                216, 110, 1);
             break;
 
         case POP_LONGTEXT:
-            ESGUI_DefaultMessageLongTextPopWindowCreate(&popup_a, pop_long_text, 112, 110);
+            ESGUI_DefaultMessageLongTextPopWindowCreate(&popup_a, pop_long_text, 216, 230);
             break;
 
         case POP_BOOL:
             ESGUI_DefaultBoolPopWindowCreate(&popup_a, "是否开启功能",
-                                             "开启", "关闭", 112, 56, &pop_bool_val);
+                                             "开启", "关闭", 216, 110, &pop_bool_val);
             break;
 
         case POP_BOOL_SCROLL:
             ESGUI_DefaultBoolScrollTitlePopWindowCreate(&popup_a,
                 "布尔弹窗滚动标题版:标题太长自动横向滚动",
-                "确定", "取消", 112, 56, &pop_bool_val);
+                "确定", "取消", 216, 110, &pop_bool_val);
             break;
 
         case POP_VALUE:
-            ESGUI_DefaultValuePopWindowCreate(&popup_a, "值修改 0-1000", 112, 56,
+            ESGUI_DefaultValuePopWindowCreate(&popup_a, "值修改 0-1000", 216, 110,
                                               &pop_value_desc);
             break;
 
         case POP_VALUE_SCROLL:
             ESGUI_DefaultValueScrollTitlePopWindowCreate(&popup_a,
                 "值弹窗滚动标题版:上下调数值,进度条跟随",
-                112, 56, &pop_value_desc);
+                216, 110, &pop_value_desc);
             break;
 
         case POP_TEXTLIST:
-            ESGUI_DefaultTextListPopWindowCreate(&popup_a, 112, 92, pop_text_items,
+            ESGUI_DefaultTextListPopWindowCreate(&popup_a, 216, 200, pop_text_items,
                                                  ESGUI_ITEM_NUM_COUNT(pop_text_items));
             break;
 
         case POP_TEXTLIST_SCROLL:
             ESGUI_DefaultTextListScrollTitlePopWindowCreate(&popup_a,
                 "文本列表滚动标题版:列表可滚动,标题自动滚",
-                112, 100, pop_text_items, ESGUI_ITEM_NUM_COUNT(pop_text_items));
+                216, 210, pop_text_items, ESGUI_ITEM_NUM_COUNT(pop_text_items));
             break;
 
         case POP_BMPLIST:
-            ESGUI_DefaultBMPListPopWindowCreate(&popup_a, "图标列表", 112, 92,
+            ESGUI_DefaultBMPListPopWindowCreate(&popup_a, "图标列表", 216, 200,
                                                 pop_bmp_items,
                                                 ESGUI_ITEM_NUM_COUNT(pop_bmp_items));
             break;
@@ -217,12 +217,12 @@ static ESGUI_MenuAction_T popup_dispatch(int idx)
         case POP_BMPLIST_SCROLL:
             ESGUI_DefaultBMPListScrollTitlePopWindowCreate(&popup_a,
                 "图片列表滚动标题版:图标横向滚动居中",
-                112, 100, pop_bmp_items, ESGUI_ITEM_NUM_COUNT(pop_bmp_items));
+                216, 210, pop_bmp_items, ESGUI_ITEM_NUM_COUNT(pop_bmp_items));
             break;
 
         case POP_STACK:
             ESGUI_DefaultTextListScrollTitlePopWindowCreate(&popup_s1, "第1层弹窗",
-                                                            112, 92, stack1_items,
+                                                            216, 200, stack1_items,
                                                             ESGUI_ITEM_NUM_COUNT(stack1_items));
             return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &popup_s1};
 

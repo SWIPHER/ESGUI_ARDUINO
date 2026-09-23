@@ -1,18 +1,53 @@
 #!/usr/bin/env python3
-"""临时工具：检查 eui_test_font 是否包含计划使用的汉字。"""
+"""检查界面字符串里的字符是否都在**当前生效的字库**里（缺字在屏上只留一个空档）。
+
+用法：
+  python3 tools/check_font_chars.py --scan            # 扫描 src/ 所有字符串字面量
+  python3 tools/check_font_chars.py '要检查的字符串'    # 只检查给定字符串
+  python3 tools/check_font_chars.py --font <字库.c> --scan   # 指定字库文件
+
+默认字库：src/font_big.c（真·30px 字库）存在就用它，否则回退到框架自带的
+lib/ESGUI/Font/eui_test_font.c。
+"""
+
+import glob
+import os
 import re
 import sys
 
-FONT = "lib/ESGUI/Font/eui_test_font.c"
+FONT_CANDIDATES = [
+    "src/font_big.c",                       # 本工程生成的真·大字号字库
+    "lib/ESGUI/Font/eui_test_font.c",       # 框架自带 16px 字库
+]
+FONT = FONT_CANDIDATES[0]
+
+
+def find_font():
+    for p in FONT_CANDIDATES:
+        if os.path.exists(p):
+            return p
+    raise SystemExit("找不到字库文件：%s" % FONT_CANDIDATES)
 
 
 def load_codes(path):
+    """解析字库里的"稀疏码点表"（不依赖数组名，靠 .unicode_list 引用找）。
+
+    注意：cmap 表里第一项（ASCII 连续段）的 .unicode_list 是 ESGUI_NULL，
+    要跳过它，取真正指向数组的那一项。
+    """
     src = open(path, encoding="utf-8", errors="ignore").read()
-    m = re.search(r"eui_test_font_unicode_list_95\[\]\s*=\s*\{(.*?)\};", src, re.S)
-    if not m:
-        raise SystemExit("unicode list not found")
-    body = m.group(1)
-    return [int(x, 16) for x in re.findall(r"0x([0-9A-Fa-f]+)", body)]
+    name = None
+    for m in re.finditer(r"\.unicode_list\s*=\s*(\w+)", src):
+        if m.group(1) != "ESGUI_NULL":
+            name = m.group(1)
+            break
+    if name is None:
+        raise SystemExit("在 %s 里找不到稀疏码点表引用" % path)
+    m2 = re.search(r"static const eui_uint16_t\s+%s\[\]\s*=\s*\{(.*?)\};" % re.escape(name),
+                   src, re.S)
+    if not m2:
+        raise SystemExit("在 %s 里找不到数组 %s" % (path, name))
+    return [int(x, 16) for x in re.findall(r"0x([0-9A-Fa-f]+)", m2.group(1))]
 
 
 def main():
@@ -20,6 +55,7 @@ def main():
     chars = set(codes)
     text = sys.argv[1] if len(sys.argv) > 1 else ""
     missing = sorted({ch for ch in text if ord(ch) not in chars and ord(ch) > 0x7F})
+    print("字库:", FONT)
     print("total sparse glyphs:", len(codes))
     print("cjk glyphs:", sum(1 for c in codes if 0x4E00 <= c <= 0x9FFF))
     print("missing:", "".join(missing) if missing else "(none)")
@@ -96,6 +132,13 @@ def scan_sources():
 
 
 if __name__ == "__main__":
+    # --font <文件> 可指定字库；否则用默认（存在 src/font_big.c 就用它）
+    if "--font" in sys.argv:
+        i = sys.argv.index("--font")
+        FONT = sys.argv[i + 1]
+        del sys.argv[i:i + 2]
+    else:
+        FONT = find_font()
     if "--scan" in sys.argv:
         sys.exit(scan_sources())
     main()
