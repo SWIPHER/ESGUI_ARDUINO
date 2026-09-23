@@ -1,5 +1,5 @@
 /*
- * esgui_port.c —— 把「屏幕 + ESGUI 框架 + WiFi 页面 + 触摸」装到一起
+ * esgui_port.c —— 把「屏幕 + ESGUI 框架 + 测试页面 + 触摸」装到一起
  *
  * 这个文件是 C 语言（.c），所以可以直接 include 框架头文件，不会有名字修饰问题。
  * 里面只有 3 件事：
@@ -14,11 +14,12 @@
 #include "ESGUI_PageDefaltVtbl.h"   /* 默认页面/弹窗构造（自带 extern "C"） */
 #include "tft_drv.h"                /* 分辨率 / 条带高 / esgui_flush_area */
 #include "touch_input.h"            /* 触摸 → ESGUI 事件（§1.7 + §1.8） */
-#include "wifi_mod_page.h"          /* 首页（从 WiFi Demo 拷过来） */
+#include "test_home_page.h"         /* 测试工程首页（所有测试页面的入口菜单） */
 
 #include <Arduino.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+
 
 /* ==================== ① 运行模式 ====================
  *  0 = 单线程轮询：屏幕刷新、触摸、Tick 全在 Arduino loop() 里做（**先用它跑通**）
@@ -84,7 +85,7 @@ static void esgui_ui_task(void *arg)
 }
 #endif
 
-/* ==================== ⑥ 初始化（setup() 里调用） ==================== */
+/* ==================== ⑤ 初始化（setup() 里调用） ==================== */
 void esgui_port_init(void)
 {
     /* 1) 屏幕：tft.init + setRotation + 清屏（内部会打印/不打印都无所谓） */
@@ -93,19 +94,26 @@ void esgui_port_init(void)
     /* 2) 触摸：Wire.begin(15,14,400k) + 复位芯片 + 探测 0x15（失败只打印提示，不阻塞） */
     touch_input_init();
 
-    /* 3) 框架：Init → BindCanvas，必须在第一次 Tick 之前完成
+    /* 3) 框架：首页初始化 → Init → BindCanvas，必须在第一次 Tick 之前完成
      *    最后一个参数 = 条带高：用 tft_drv.h 里的 ESGUI_STRIP_H（推荐 32） */
-    ESGUI_Init(&ui, &wifi_mod_page, ESGUI_CanvasRefresh_CB, ESGUI_AnimTick_CB);
+    test_home_page_init();                      /* 测试首页：条目表 + 虚函数表（无动态分配） */
+    ESGUI_Init(&ui, &test_home_page, ESGUI_CanvasRefresh_CB, ESGUI_AnimTick_CB);
     ESGUI_BindCanvas(&ui, &canvas, &itr,
                      gram, ESGUI_LOGIC_W, ESGUI_LOGIC_H, ESGUI_STRIP_H);
-
-    /* 4) 页面 + 业务（Demo 原样拷来的函数，不用改） */
-    wifi_mod_page_init(&ui);                    /* 内部会 wifi_app_init + 注册 ProducerBox */
 
 #if PORT_USE_UI_TASK
     /* 栈 4096、优先级 4、core 0（高于 Arduino loopTask，低于 WiFi 系统任务） */
     xTaskCreatePinnedToCore(esgui_ui_task, "ESGUI_UI", 4096, NULL, 4, NULL, 0);
 #endif
+}
+
+/* ==================== ⑦ UI 实例访问器 ====================
+ * 少数测试页需要直接调 UI 级 API（覆盖层 ESGUI_OverlayAdd 等），
+ * 而 ui 是本文件 static 的（不存在全局符号），所以统一从这里取。
+ */
+struct esgui *esgui_port_get_ui(void)
+{
+    return &ui;
 }
 
 /* ==================== ⑥ 主循环（loop() 里调用） ==================== */

@@ -22,31 +22,46 @@ extern "C" {
  *   TFT_Drivers/ST7789_Defines.h 的偏移表只认 240x240 / 240x280 / 240x300 / 240x320，
  *   写成 284 一条都不命中 → ST7789_Rotation.h 里整块 #ifdef CGRAM_OFFSET（行偏移补偿）
  *   不生效（rowstart 恒为 0），而且 MADCTL 会取 RGB 而不是 BGR。
- *   所以本文件不依赖 TFT_eSPI 的补偿，改用 TFT_OFFSET_Y 自己把画面摆到正确行：
- *     TFT_OFFSET_Y = 面板可见区在 GRAM 里的起始行 + 上下留边
- *   校准办法：用 TFT_eSPI 直绘一屏"1px 边框 + 四角 8x8 白块"（见 README/历史提交里的自检代码），
- *   看四角白块是否正好落在屏幕四角、上下是否对称；若整体偏移，把偏移行数补进 TFT_OFFSET_Y
- *   （例如可见区从 GRAM 第 20 行开始 → 20 + 2 = 22）。
+ *   所以本文件不依赖 TFT_eSPI 的补偿，改用 TFT_OFFSET_X/Y 自己把画面摆到正确位置。
  */
 #define TFT_SCREEN_W   240
 #define TFT_SCREEN_H   284
 
-/* 画面在面板上的起点（逻辑分辨率比面板小时用来居中 / 留边）
- * 本板 284 - 280 = 4 → 上下各留 2 行，画面居中，观感最好。 */
-#define TFT_OFFSET_X   0
-#define TFT_OFFSET_Y   2
-
-/* =================== ② ESGUI 逻辑分辨率（必须是 8 的倍数！） ===================
- * 284 不是 8 的倍数（284 = 8*35 + 4），所以逻辑高只能二选一：
- *   方案A（推荐、简单）：向下取整 280 → 面板上下各留 2 行（配合 TFT_OFFSET_Y=2 即居中）
- *   方案B（多挤 4 行）：向上取整 288 → 送屏时按面板高度钳位，实际仍只显示 284 行
- * 两种方案的"行数钳位"代码 §1.4 里都已经写好了，选哪个都不会越界。
+/* =================== ② UI 放大倍数 + 逻辑分辨率 + 安全区居中 ===================
+ * 这块屏是"圆角面板"：四角有圆弧，贴边的文字会被圆角切掉。所以不要铺满整屏，
+ * 而是留一圈安全边距，把逻辑区居中放进去（本文件就是干这个的）。
+ *
+ * 做法（比换大字号字库更省事、更统一）：
+ *   ① ESGUI 逻辑区缩小到 112x128（仍是 8 的倍数，画布按 8 行一页组织）；
+ *   ② 驱动把每个逻辑像素扩成 2x2 的方块送出屏 → 字与图形**整体放大 2 倍**；
+ *   ③ 224x256 的显示区在 240x284 面板上水平居中、垂直居中 → 四周留出安全边距，
+ *      圆角怎么切都切不到内容（上下各留 14 行，左右各留 8 列）。
+ *
+ * 想让字更大/更小：只改 TFT_ZOOM 并同步调整 ESGUI_LOGIC_W/H，使「逻辑尺寸 × 缩放」
+ * 在面板内且尽量大（保持 8 的倍数）：
+ *   TFT_ZOOM=1 → 逻辑 224x264（最小字，一屏能看到的内容最多）
+ *   TFT_ZOOM=2 → 逻辑 112x128（当前：字放大 2 倍，触控目标 36 行高，好点）
+ *   TFT_ZOOM=3 → 逻辑  72x 88（字超大，一屏只剩 4~5 行）
  */
-#define ESGUI_LOGIC_W  TFT_SCREEN_W
-#define ESGUI_LOGIC_H  280          /* ← 方案A（向下取整到 8）；想用方案B就写 288 */
+#define TFT_ZOOM       2            /* 整数放大倍数（1/2/3） */
 
-#if (ESGUI_LOGIC_H % 8) != 0
-  #error "ESGUI_LOGIC_H 必须是 8 的倍数（框架画布是按 8 行一页组织的）"
+#define ESGUI_LOGIC_W  112          /* ← 逻辑宽（必须 8 的倍数）*/
+#define ESGUI_LOGIC_H  128          /* ← 逻辑高（必须 8 的倍数）*/
+
+/* 画面在面板上的起点 = 把 ESGUI_LOGIC_W*TFT_ZOOM x ESGUI_LOGIC_H*TFT_ZOOM 居中 */
+#define TFT_OFFSET_X   ((TFT_SCREEN_W - ESGUI_LOGIC_W * TFT_ZOOM) / 2)
+#define TFT_OFFSET_Y   ((TFT_SCREEN_H - ESGUI_LOGIC_H * TFT_ZOOM) / 2)
+
+#if (ESGUI_LOGIC_H % 8) != 0 || (ESGUI_LOGIC_W % 8) != 0
+  #error "ESGUI_LOGIC_W/H 必须是 8 的倍数（框架画布是按 8 行一页组织的）"
+#endif
+
+#if (TFT_ZOOM < 1) || (TFT_ZOOM > 3)
+  #error "TFT_ZOOM 只支持 1~3（整数倍放大，非整数会破坏像素网格）"
+#endif
+
+#if (ESGUI_LOGIC_W * TFT_ZOOM) > TFT_SCREEN_W || (ESGUI_LOGIC_H * TFT_ZOOM) > TFT_SCREEN_H
+  #error "逻辑分辨率 x TFT_ZOOM 超出面板：请调小 ESGUI_LOGIC_W/H 或 TFT_ZOOM"
 #endif
 
 /* =================== ③ 条带高（8 的倍数） ===================
@@ -93,6 +108,27 @@ extern esgui_pal_cb_t g_pal_cb;
 void tft_drv_init(void);
 void tft_drv_backlight(int on);
 void esgui_flush_area(int x0, int y0, int x1, int y1, const uint8_t *buf1bpp);
+
+/* 把逻辑区之外的"面板留边"（上下各 TFT_OFFSET_Y 行）刷成底色。
+ * 框架永远不画这几行，所以任何绕过框架直写屏幕的代码收尾时调它一下就不会留残影；
+ * 正常刷新时 esgui_flush_area 每帧也会自动补一次（护栏）。 */
+void tft_drv_cover_margins(void);
+
+/* =================== 显示自检（绕过 1bpp 画布，直接写 RGB565） ===================
+ * 用途：验证"屏幕 + 接线 + 像素偏移"本身没问题（ESGUI 画错时用来分清是驱动还是框架）。
+ * 调用会**阻塞** 1~2 秒（连续写几屏图案），期间不刷新 ESGUI；返回后请 ACT_REFRESH 重绘。
+ * 结束时会把整块面板清成底色，所以不会在"逻辑区外的留边"上留下残影。
+ * 图案清单（idx 从 0 开始）：
+ *   0 纯色轮播（红/绿/蓝/白/黑）—— 检查三原色与亮暗
+ *   1 RGB 基本色竖条（8 色）    —— 检查颜色映射（R/B 反了就是 RGB/BGR 问题）
+ *   2 RGB565 三色渐变（R→G→B）  —— 检查色深/渐变是否有台阶断层
+ *   3 棋盘格 + 1px 红边框 + 四角 —— 检查像素对齐、有无行列偏移（配 TFT_OFFSET_X/Y）
+ *      · 屏幕顶/底各一条红实线 + 白黑相间的 8px 方格（看上去像白虚线）= 本图案的正常样子
+ */
+int         tft_drv_selftest_count(void);
+const char *tft_drv_selftest_name(int idx);
+void        tft_drv_selftest_show(int idx);
+
 
 #ifdef __cplusplus
 }

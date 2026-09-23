@@ -14,11 +14,14 @@
 extern "C" {
 #endif
 
-/* setup() 里调用一次：屏幕初始化 → 框架初始化 → 页面 → 输入 →（可选）UI 任务 */
+/* setup() 里调用一次：屏幕初始化 → 框架初始化 → 首页 → 输入 →（可选）UI 任务 */
 void esgui_port_init(void);
 
 /* loop() 里反复调用：投递按键事件；单线程模式下同时负责 10ms 一次的 ESGUI_Tick */
 void esgui_port_poll(uint32_t now_ms);
+
+/* 取 UI 实例（等价于框架里的 ESGUI_T*），供需要 UI 级 API 的测试页使用 */
+struct esgui *esgui_port_get_ui(void);
 
 #ifdef __cplusplus
 }

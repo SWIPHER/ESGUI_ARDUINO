@@ -16,10 +16,13 @@
 #include "touch_cst816d.h"
 #include <string.h>                 /* memset */
 
-/* ==================== 手感参数（想调手感就改这里） ==================== */
+/* ==================== 手感参数（想调手感就改这里） ====================
+ * ★ 注意：这些是**屏幕像素**阈值（触摸坐标就是屏幕像素），
+ *   本工程 UI 做了 2 倍放大（见 tft_drv.h 的 TFT_ZOOM），一行菜单高 36px，
+ *   所以"一格"取 32px 左右最接近一行。改 TFT_ZOOM 时记得同步调这里。 */
 #define TOUCH_EVT_QUEUE     8       /* 一次滑动最多排多少个事件（= 一次最多翻几格） */
-#define TOUCH_STEP_PX       20      /* 滑过多少像素算"一格"（≈ 一条菜单的高度） */
-#define TOUCH_SWIPE_MIN_PX  24      /* 位移超过它才判定为"滑动"；小于它就是"轻点" */
+#define TOUCH_STEP_PX       32      /* 滑过多少像素算"一格"（≈ 一条菜单的高度） */
+#define TOUCH_SWIPE_MIN_PX  30      /* 位移超过它才判定为"滑动"；小于它就是"轻点" */
 #define TOUCH_LONG_PRESS_MS 600     /* 按住多久算长按（= 返回） */
 
 /* ==================== 内部状态 ==================== */
@@ -38,6 +41,12 @@ static gesture_t s_g;
 static ESGUI_EventCode_t s_q[TOUCH_EVT_QUEUE];
 static uint8_t s_q_head, s_q_tail;
 static uint8_t s_gap;     /* 1 = 上一轮发过真实事件，本轮先回 EVT_NONE */
+
+/* ---- 供测试页读取的"最近一次采样快照 + 统计"（只读展示用） ---- */
+static touch_state_t s_last;
+static bool          s_last_valid;
+static uint32_t      s_ok_cnt;
+static uint32_t      s_err_cnt;
 
 /* ==================== 小工具 ==================== */
 static int abs_i(int v) { return (v < 0) ? -v : v; }
@@ -67,7 +76,26 @@ void touch_input_init(void)
     memset(&s_g, 0, sizeof(s_g));
     q_reset();
     s_gap = 0;
+    memset(&s_last, 0, sizeof(s_last));
+    s_last_valid = false;
+    s_ok_cnt = 0;
+    s_err_cnt = 0;
     touch_drv_init();                       /* I2C + 复位 + 探测 0x15（见 §1.7） */
+}
+
+bool touch_input_get_last(touch_state_t *st)
+{
+    if (st == NULL || !s_last_valid) {
+        return false;
+    }
+    *st = s_last;
+    return true;
+}
+
+void touch_input_get_stats(uint32_t *ok, uint32_t *err)
+{
+    if (ok != NULL)  *ok  = s_ok_cnt;
+    if (err != NULL) *err = s_err_cnt;
 }
 
 /* 采一帧触点并推进状态机（可能往队列里排 0~N 个事件）
@@ -79,8 +107,12 @@ static void touch_sample_and_update(uint32_t now_ms)
 
     /* 读一次触点；I2C 失败就当"本次没有输入"，不改任何状态 */
     if (!touch_drv_read(&st)) {
+        s_err_cnt++;                                    /* 统计用：I2C 读失败次数 */
         return;
     }
+    s_last = st;                                        /* 快照：触摸测试页显示原始坐标/手势 */
+    s_last_valid = true;
+    s_ok_cnt++;
 
     if (st.fingers > 0) {
         /* ---------------- 手指按着 ---------------- */
