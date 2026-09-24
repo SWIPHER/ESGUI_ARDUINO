@@ -110,7 +110,7 @@ static ESGUI_MenuAction_T d3_item_enter(ESGUI_MenuPage_T *page, void *arg)
 {
     (void)page;
     snprintf(d3_msg_buf, sizeof(d3_msg_buf), "选中模型\n%s", (const char *)arg);
-    ESGUI_DefaultMessagePopWindowCreate(&d3_msg_popup, d3_msg_buf, 216, 110, 1);
+    ESGUI_DefaultMessagePopWindowCreate(&d3_msg_popup, d3_msg_buf, 180, 110, 1);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &d3_msg_popup};
 }
 

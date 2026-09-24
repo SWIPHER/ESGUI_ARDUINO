@@ -137,7 +137,7 @@ static void ov_on_draw(ESGUI_Overlay_T *ov)
 
 static ESGUI_MenuAction_T ov_show_msg(const char *msg)
 {
-    ESGUI_DefaultMessagePopWindowCreate(&ov_msg_popup, msg, 216, 110, 1);
+    ESGUI_DefaultMessagePopWindowCreate(&ov_msg_popup, msg, 180, 110, 1);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &ov_msg_popup};
 }
 

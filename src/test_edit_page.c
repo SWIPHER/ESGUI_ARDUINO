@@ -37,7 +37,7 @@ static ESGUI_PopWindow_T edit_msg_popup;
 
 static ESGUI_MenuAction_T edit_show_msg(const char *msg)
 {
-    ESGUI_DefaultMessagePopWindowCreate(&edit_msg_popup, msg, 216, 110, 1);
+    ESGUI_DefaultMessagePopWindowCreate(&edit_msg_popup, msg, 180, 110, 1);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &edit_msg_popup};
 }
 

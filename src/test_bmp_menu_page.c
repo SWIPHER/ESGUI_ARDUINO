@@ -26,7 +26,7 @@ static ESGUI_PopWindow_T bmp_msg_popup;
 static ESGUI_MenuAction_T bmp_show_msg(const char *msg)
 {
     /* 弹窗只保存消息**指针**，不拷贝文本 → 必须传常驻字符串（字面量/静态缓冲） */
-    ESGUI_DefaultMessagePopWindowCreate(&bmp_msg_popup, msg, 216, 110, 1);
+    ESGUI_DefaultMessagePopWindowCreate(&bmp_msg_popup, msg, 180, 110, 1);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &bmp_msg_popup};
 }
 

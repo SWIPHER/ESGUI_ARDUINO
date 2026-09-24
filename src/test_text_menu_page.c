@@ -45,7 +45,7 @@ static ESGUI_PopWindow_T text_value_popup;
  *       ③ 字库里没有全角标点（：（）等），一律用 ASCII 标点。 */
 static ESGUI_MenuAction_T text_show_msg(const char *msg)
 {
-    ESGUI_DefaultMessagePopWindowCreate(&text_msg_popup, msg, 216, 110, 1);
+    ESGUI_DefaultMessagePopWindowCreate(&text_msg_popup, msg, 180, 110, 1);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &text_msg_popup};
 }
 
@@ -157,7 +157,7 @@ static ESGUI_MenuAction_T text_enter_edit_number(ESGUI_MenuPage_T *page, void *a
 {
     (void)page;
     (void)arg;
-    ESGUI_DefaultValuePopWindowCreate(&text_value_popup, "值修改 0-100", 216, 110,
+    ESGUI_DefaultValuePopWindowCreate(&text_value_popup, "值修改 0-100", 180, 110,
                                       &text_number_desc);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &text_value_popup};
 }
@@ -278,7 +278,7 @@ static ESGUI_PopWindow_T dyn_msg_popup;
 
 static ESGUI_MenuAction_T dyn_show_msg(const char *msg)
 {
-    ESGUI_DefaultMessagePopWindowCreate(&dyn_msg_popup, msg, 216, 110, 1);
+    ESGUI_DefaultMessagePopWindowCreate(&dyn_msg_popup, msg, 180, 110, 1);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &dyn_msg_popup};
 }
 

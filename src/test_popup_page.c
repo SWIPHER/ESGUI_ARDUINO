@@ -121,7 +121,7 @@ static ESGUI_MenuAction_T stack3_enter(ESGUI_MenuPage_T *page, void *arg)
 {
     (void)page;
     (void)arg;
-    ESGUI_DefaultMessagePopWindowCreate(&popup_s3, "第3层弹窗\n点确定逐层退", 216, 110, 1);
+    ESGUI_DefaultMessagePopWindowCreate(&popup_s3, "第3层弹窗\n点确定逐层退", 180, 110, 1);
     return (ESGUI_MenuAction_T){ACT_SHOW_POPUP, &popup_s3};
 }
 
@@ -157,12 +157,12 @@ static ESGUI_MenuAction_T popup_dispatch(int idx)
     switch (idx) {
         case POP_MSG:
             ESGUI_DefaultMessagePopWindowCreate(&popup_a,
-                "消息弹窗\n点确定关闭", 216, 110, 1);
+                "消息弹窗\n点确定关闭", 180, 110, 1);
             break;
 
         case POP_MSG_NOBTN:
             ESGUI_DefaultMessagePopWindowCreate(&popup_a,
-                "消息弹窗\n无按钮版", 216, 110, 0);
+                "消息弹窗\n无按钮版", 180, 110, 0);
             break;
 
         case POP_MSG_SCROLL:
@@ -177,17 +177,17 @@ static ESGUI_MenuAction_T popup_dispatch(int idx)
 
         case POP_BOOL:
             ESGUI_DefaultBoolPopWindowCreate(&popup_a, "是否开启功能",
-                                             "开启", "关闭", 216, 110, &pop_bool_val);
+                                             "开启", "关闭", 180, 110, &pop_bool_val);
             break;
 
         case POP_BOOL_SCROLL:
             ESGUI_DefaultBoolScrollTitlePopWindowCreate(&popup_a,
                 "布尔弹窗滚动标题版:标题太长自动横向滚动",
-                "确定", "取消", 216, 110, &pop_bool_val);
+                "确定", "取消", 180, 110, &pop_bool_val);
             break;
 
         case POP_VALUE:
-            ESGUI_DefaultValuePopWindowCreate(&popup_a, "值修改 0-1000", 216, 110,
+            ESGUI_DefaultValuePopWindowCreate(&popup_a, "值修改 0-1000", 180, 110,
                                               &pop_value_desc);
             break;
 

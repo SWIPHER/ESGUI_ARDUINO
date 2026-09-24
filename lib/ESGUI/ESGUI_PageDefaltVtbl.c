@@ -2602,7 +2602,7 @@ void esgui_default_message_popwindow_on_draw(ESGUI_MenuPage_T *page) {
     eui_draw_text(c_it->canvas,window->window_x+5,window->window_y+5,&ESGUI_DEFAULT_FONT,window->title,EUI_MODE_SET);
     if (data->button_en) {
         int x = (window->window_w - data->text_len) / 2 + window->window_x;
-        int y = window->window_y + window->window_h - 15;
+        int y = window->window_y + window->window_h - 10 - data->font_height;  /* 按钮底部距离弹窗底部 10px */
         eui_draw_text(c_it->canvas,x,y,
             &ESGUI_DEFAULT_FONT,"OK",EUI_MODE_SET);
         ESGUI_WidgetTextFocusBox(c_it->canvas,x,y + ESGUI_FOCUS_BOX_OFF_Y,data->font_height,data->text_len);
@@ -2816,7 +2816,7 @@ void esgui_default_message_scroll_title_popwindow_on_draw(ESGUI_MenuPage_T *page
     draw_popup_scrolling_title(c_it, window, data->title_len, data->title_scroll_x);
     if (data->button_en) {
         int x = (window->window_w - data->text_len) / 2 + window->window_x;
-        int y = window->window_y + window->window_h - 15;
+        int y = window->window_y + window->window_h - 10 - data->font_height;  /* 按钮底部距离弹窗底部 10px */
         eui_draw_text(c_it->canvas, x, y, &ESGUI_DEFAULT_FONT, "OK", EUI_MODE_SET);
         ESGUI_WidgetTextFocusBox(c_it->canvas, x, y + ESGUI_FOCUS_BOX_OFF_Y, data->font_height, data->text_len);
     }
