@@ -15,20 +15,23 @@
 面板 240x284
   └─ 逻辑区 216x272（1 逻辑像素 = 1 面板像素，零重采样）
        居中放置 → 左右各留 12 列、上下各留 6 行安全边距（圆角切不到内容）
-  └─ 字库 src/font_big.c：PingFang SC 30px 渲染（line_height=33，汉字步进 30px）
+  └─ 字库 src/font_big.c：思源等宽 Source Han Mono SC 26px（line_height=31，汉字步进 26px）
 ```
 
-效果：30px 汉字、一屏 6 行、每行 7 个汉字；笔画细节保留（细笔画仍是 1px），1:1 输出锐利不打折。
+效果：26px 汉字（比框架自带 16px 明显大、比上一版 30px 略小）、一屏 6 行、每行 7 个汉字；
+笔画细节保留（细笔画仍是 1px），1:1 输出锐利不打折。
+
+> 换字体/调字号的完整方法见 **[change_font.md](change_font.md)**（含各字号实测对照表）。
 
 ### 想换字号
 
 字库由脚本从系统字体生成，改字号只改一个参数：
 
 ```bash
-python3 tools/gen_font_big.py --size 26            # 更小（每行更多字）
-python3 tools/gen_font_big.py --size 34            # 更大
-python3 tools/gen_font_big.py --size 30 --preview  # 只预览字体度量与字形，不写文件
-python3 tools/gen_font_big.py --list-faces         # 列出 .ttc 里的字体面（PingFang SC = index 2）
+python3 tools/gen_font_big.py --size 24                        # 更小（每行更多字）
+python3 tools/gen_font_big.py --size 30                        # 更大
+python3 tools/gen_font_big.py --size 26 --preview              # 只预览字体度量与字形，不写文件
+python3 tools/gen_font_big.py --list-faces                     # 列出 .ttc 里的字体面（详表见 change_font.md）
 ```
 
 脚本会打印"汉字步进 / 每行可放几个汉字 / 行距"，据此再决定要不要调逻辑分辨率和
@@ -41,8 +44,14 @@ python3 tools/gen_font_big.py --list-faces         # 列出 .ttc 里的字体面
 
 ### 想换字体/字重
 
-`--font "/System/Library/Fonts/PingFang.ttc" --index 5`（PingFang SC Medium 略粗，深色小屏更清楚）。
-其它可选：`Hiragino Sans GB.ttc`、`AppleSDGothicNeo.ttc`。
+默认字体是仓库里的 **思源等宽**（`myfont/SourceHanMono-Regular.ttc`，开源可再分发），
+换字体只需 `--font <路径> --index <面>`；系统字体（如 PingFang）、`.ttf/.otf` 单字体都能用：
+
+```bash
+python3 tools/gen_font_big.py --list-faces --font myfont/SourceHanMono-Regular.ttc
+#  index 0: ('Source Han Mono SC', 'Regular')   ← 简体面
+python3 tools/gen_font_big.py --font myfont/SourceHanMono-Regular.ttc --index 0 --size 26
+```
 
 > 为什么不用"框架自带字库 + 放大"：那套 16px 字库只有 1px 笔画，放大只能得到 2px 方块。
 > 真要大字号且清晰，必须重新渲染——这也是框架自带 `ESGUI Font Generator` 的思路，
@@ -154,15 +163,15 @@ ESGUI 不是"固定帧率刷屏"，而是 **节拍（Tick）+ 按需重绘**：�
 
 | 参数 | 当前值 | 调**小**的效果 | 调**大**的效果 |
 | --- | --- | --- | --- |
-| `TOUCH_STEP_PX` | `38` | 更灵敏（划一点就翻行；一行菜单 = 行高 33 + 间距 6 = 39px） | 更迟钝（要划更长才翻一行） |
-| `TOUCH_SWIPE_MIN_PX` | `36` | 更容易判定成"滑动" | 更难判定成滑动（轻点更"安全"） |
+| `TOUCH_STEP_PX` | `36` | 更灵敏（划一点就翻行；一行菜单 = 行高 31 + 间距 6 = 37px） | 更迟钝（要划更长才翻一行） |
+| `TOUCH_SWIPE_MIN_PX` | `34` | 更容易判定成"滑动" | 更难判定成滑动（轻点更"安全"） |
 | `TOUCH_LONG_PRESS_MS` | `600` | 长按更快触发（返回） | 长按更难误触 |
 | `TOUCH_EVT_QUEUE` | `8` | 一次快速甩动翻的格数变少 | 一次甩动可翻更多格 |
 
 常见诉求对应改法：
 
-* **太钝 / 划好几下才动一行** → `TOUCH_STEP_PX 38 → 26`、`TOUCH_SWIPE_MIN_PX 36 → 24`
-* **太灵 / 手指一放就乱跳** → `TOUCH_STEP_PX 38 → 48`、`TOUCH_SWIPE_MIN_PX 36 → 42`
+* **太钝 / 划好几下才动一行** → `TOUCH_STEP_PX 36 → 24`、`TOUCH_SWIPE_MIN_PX 34 → 22`
+* **太灵 / 手指一放就乱跳** → `TOUCH_STEP_PX 36 → 46`、`TOUCH_SWIPE_MIN_PX 34 → 40`
 * **返回老被误触** → `TOUCH_LONG_PRESS_MS 600 → 800`
 
 > 这些阈值是**屏幕像素**，与 UI 放大倍数绑定：改过 `tft_drv.h` 的 `TFT_ZOOM` 后，要同步把
@@ -207,8 +216,8 @@ ESGUI 不是"固定帧率刷屏"，而是 **节拍（Tick）+ 按需重绘**：�
 platformio.ini:  -DESGUI_3D_MENU_MODEL_SCALE=33
 ```
 
-本屏（逻辑 216x272、字高 33）实际算出来：焦点框 187px × 33% ≈ **模型 61px**，
-原来 65% 时是 121px——正好一半；`slot_w` 也一起变小，一屏可见的模型从 2.1 个变成约 3.4 个
+本屏（逻辑 216x272、字高 31）实际算出来：焦点框 189px × 33% ≈ **模型 62px**，
+原来 65% 时是 123px——正好一半；`slot_w` 也一起变小，一屏可见的模型从 2.1 个变成约 3.4 个
 （横向仍是"焦点居中"轮播）。
 
 > 想核对不同取值下的尺寸，直接跑脚本（复刻了框架的公式）：
@@ -226,6 +235,39 @@ platformio.ini:  -DESGUI_3D_MENU_MODEL_SCALE=33
 
 > 上面这些宏都是 `#ifndef` 保护的，用 `platformio.ini` 的 `build_flags` 加 `-D...=值` 即可覆盖，
 > 不用改框架源码；改完 `pio run -t upload` 生效。
+
+#### "选中白框"没框正（文字在框里偏右下）
+
+框架画白框的基准是「行顶 + 容器左缘」（菜单里 `x=0`、列表弹窗里 `x=窗口左缘`），而文字是从
+`ESGUI_TEXT_MARGIN_X` 处开始画、字墨还要比行顶低 `(ascent − base_line)` 才开始 →
+**框偏左上、文字显得偏右下**。原值（偏移全 0）实测：左留白 8 / 右留白 1、上留白 9 / 下留白 **−2**
+（下边把字切掉 2px），正是肉眼看"没居中"的原因。
+
+本工程用两个宏把框摆正（宏定义在 `lib/ESGUI/ESGUI_DefaultConfig.h`，默认 `0` = 框架原样，只在
+`platformio.ini` 里覆盖取值）：
+
+| 宏 | 当前值 | 作用范围 / 含义 |
+| --- | --- | --- |
+| `ESGUI_FOCUS_BOX_OFF_X` | `4` | 焦点框**右移**像素；用于菜单 + 文本列表弹窗（弹窗里的 OK / 是否 按钮本来就是按文字宽画的，不参与水平位移） |
+| `ESGUI_FOCUS_BOX_OFF_Y` | `5` | 焦点框**下移**像素；用于**所有**文本焦点框（含弹窗 OK 按钮、是否按钮） |
+
+摆正后的实测留白（`python3 tools/check_focus_box.py 测试 触摸测试 设置`）：**左 5 / 右 5、上 4 / 下 3**
+——基本正中心。想自己量当前效果：
+
+```
+python3 tools/check_focus_box.py                 # 默认样本字
+python3 tools/check_focus_box.py 设置 玩家1 3D菜单  # 换成你界面里的实际文字
+```
+
+> 取值与**字体/字号**强相关（字库的 `ascent`/`base_line` 一改就得重算）：
+> 右移量 ≈ `TEXT_MARGIN_X + 字形左留白 − FOCUS_BOX_PAD_X/2`，
+> 下移量 ≈ `(ascent − base_line) + 字面高/2 − 行高/2`。换字库后跑一遍脚本，
+> 微调到"左右差 ≤ 1、上下差 ≤ 3"即可（详见 `change_font.md`）。
+
+> 注意：带下伸部的字母（`g` `y` `p` `j` `q`）字墨比行高还高，而框架的框高 = 行高，
+> 所以下边**必然**装不下（只能二选一）。当前界面全是汉字/数字/大写，按汉字居中取 5 最合适；
+> 若你的界面以英文小写为主，把 `ESGUI_FOCUS_BOX_OFF_Y` 调到 `8` 左右可让下伸部也不越界，
+> 代价是汉字看起来略偏上。
 
 其它 UI 比例参数（条目间距、进度条宽、键盘键高、圆角等）都在 `platformio.ini` 的
 "UI 缩放"那一组 build_flags 里（见本文开头《字号 / 安全区》）。
@@ -254,7 +296,7 @@ src/
   esgui_port.c/.h      平台装配层：屏幕初始化 → ESGUI_Init → 触摸轮询 → ESGUI_Tick（唯一消费者）
   tft_drv.cpp/.h       ESGUI 1bpp 条带画布 → RGB565 → TFT_eSPI 送屏（1:1 + 安全区居中）
                        附：显示自检图案、g_pal_cb 调色板回调、安全区护栏、面板⇄逻辑坐标换算
-  font_big.c/.h        真·30px 字库（由 tools/gen_font_big.py 生成，403KB 数据放 Flash）
+  font_big.c/.h        真·26px 字库（思源等宽；由 tools/gen_font_big.py 生成，约 285KB 数据放 Flash）
   touch_cst816d.cpp/.h CST816D I2C 采集层（含可选方向镜像）
   touch_input.c/.h     触点序列 → ESGUI 事件；并提供触点快照/采样统计给测试页
   main.cpp             setup()/loop() 两行装配
@@ -265,8 +307,8 @@ src/
   test_assets.c/.h     位图/动图资源（自动生成：48x48 图标 + 40x40 缩略图 + 12 帧 48x48 动图）
 
 tools/
-  gen_font_big.py      从系统 TTF 生成真·大字号字库 src/font_big.c/.h（PingFang SC 30px）
-                       python3 tools/gen_font_big.py --size 30        # 重新生成
+  gen_font_big.py      从 TTF/TTC 生成字库 src/font_big.c/.h（默认思源等宽 SC 26px）
+                       python3 tools/gen_font_big.py --size 26        # 重新生成（详见 change_font.md）
                        python3 tools/gen_font_big.py --preview       # 终端预览字形与度量
                        python3 tools/gen_font_big.py --list-faces    # 列出 .ttc 的字体面
   gen_test_assets.py   生成 src/test_assets.c/.h（图标/缩略图/动图）
@@ -277,6 +319,8 @@ tools/
                        python3 tools/font_metrics.py '触摸测试 面板123,456'
   check_3d_model_size.py  复刻框架 3D 菜单尺寸公式，核对模型在不同 MODEL_SCALE 下的显示尺寸
                        python3 tools/check_3d_model_size.py 33
+  check_focus_box.py   核对"选中白框"相对文字是否居中（读 platformio.ini 的 OFF_X/OFF_Y + 字库度量）
+                       python3 tools/check_focus_box.py 测试 触摸测试
 ```
 
 ## 常见问题（先看这里）
@@ -302,7 +346,7 @@ tools/
 **5. 内容贴到圆角上** → 把安全边距放大：减小 `ESGUI_LOGIC_W/H`（例如 200x256），
 `TFT_OFFSET_X/Y` 会自动重新居中；或直接在 `tft_drv.h` 里手填偏移。
 
-**6. 滑动一格跳两行** → 改 `src/touch_input.c` 的 `TOUCH_STEP_PX`（现在 38 ≈ 一行 39px 高），
+**6. 滑动一格跳两行** → 改 `src/touch_input.c` 的 `TOUCH_STEP_PX`（现在 36 ≈ 一行 37px 高），
 或见上文《调参指南》二、触摸灵敏度（含"跟手度"为什么不佳的说明）。
 
 **7. 触摸测试页的准星 / 轨迹和手指位置不一致**
@@ -332,7 +376,8 @@ tools/
 
 这是**像素放大**的固有限制：把 16px 点阵拉成 2 倍，笔画从 1px 变 2px、笔画之间的空隙被挤掉，
 复杂汉字就糊了——放大不会产生新细节。本工程已经改成正确做法：
-**用 `tools/gen_font_big.py` 按最终尺寸（30px）渲染真字库 + `TFT_ZOOM=1` 做 1:1 映射**。
+**用 `tools/gen_font_big.py` 按最终尺寸（当前 26px）渲染真字库 + `TFT_ZOOM=1` 做 1:1 映射**。
+换字体/调字号的完整流程见 **[change_font.md](change_font.md)**。
 
 如果你自己改了字号又觉得糊，检查两点：
 

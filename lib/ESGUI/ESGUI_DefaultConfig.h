@@ -157,6 +157,31 @@
 #define ESGUI_FOCUS_BOX_PAD_X    6
 #endif
 
+#ifndef ESGUI_FOCUS_BOX_OFF_X
+/**
+ * @brief 文本焦点框水平微调（像素，正 = 右移；默认 0 = 框架原样）
+ * @note  焦点框是按"文本行左缘"画的（菜单里 x=0、列表弹窗里 x=窗口左缘），
+ *        而文字实际从 ESGUI_TEXT_MARGIN_X 处开始画（字面还带一点左侧留白），
+ *        所以框默认偏左、文字在框里显得偏右。把它右移一点即可摆正：
+ *          推荐值 ≈ ESGUI_TEXT_MARGIN_X + 字形左留白(约 1) − ESGUI_FOCUS_BOX_PAD_X / 2
+ *        取值与字体/字号有关（字面留白随字体变化），本工程在 platformio.ini 里覆盖；
+ *        调法见 change_font.md。
+ */
+#define ESGUI_FOCUS_BOX_OFF_X    0
+#endif
+
+#ifndef ESGUI_FOCUS_BOX_OFF_Y
+/**
+ * @brief 文本焦点框垂直微调（像素，正 = 下移；默认 0 = 框架原样）
+ * @note  框高 = 行高(pd->font_height)，且框顶对齐"行顶"；而字形墨迹一般从行顶下方
+ *        (ascent − base_line) 处才开始、字面又比行高略矮，于是框偏上、文字在框里偏下。
+ *        下移量 ≈ (ascent − base_line) + 字面高 / 2 − 行高 / 2（字库的 ascent/base_line
+ *        在生成字库时确定，见 tools/gen_font_big.py 打印的度量）。
+ *        取值与字体/字号有关，本工程在 platformio.ini 里覆盖；调法见 change_font.md。
+ */
+#define ESGUI_FOCUS_BOX_OFF_Y    0
+#endif
+
 #ifndef ESGUI_TEXT_MARGIN_X
 /**
  * @brief 文本绘制时相对于左侧的边距（像素）

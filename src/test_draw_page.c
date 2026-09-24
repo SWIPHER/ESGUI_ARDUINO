@@ -325,7 +325,7 @@ static void pat_widget(Canvas *c)
     draw_label(c, 8, cy + LH, "复选框 方/圆");
 
     /* 焦点框：文本焦点框（XOR 圆角）+ 位图焦点框（四角） */
-    int fy = cy + LH + LH;
+    int fy = cy + LH + 6;
     ESGUI_WidgetTextFocusBox(c, 8, fy - 4, LH - 2, 90);
     draw_label(c, 106, fy - 4, "焦点框");
     ESGUI_WidgetBmpFocusBox(c, 8, fy + LH, 40, 26);
@@ -386,8 +386,8 @@ static void pat_align(Canvas *c)
     for (int y = 40; y < h; y += 40) eui_draw_hline(c, 0, w - 1, y, EUI_MODE_SET);
 
     /* 每 2px 一条 1px 竖线：能看出来就说明"列没丢、没被缩放" */
-    for (int x = 0; x < w; x += 2) eui_draw_vline(c, x, 200, 214, EUI_MODE_SET);
-    draw_label(c, 8, 216, "1px 竖条");
+    for (int x = 0; x < w; x += 2) eui_draw_vline(c, x, 188, 202, EUI_MODE_SET);
+    draw_label(c, 8, 204, "1px 竖条");
 }
 
 static void pat_dither(Canvas *c)
@@ -408,7 +408,7 @@ static void pat_dither(Canvas *c)
     }
 
     /* 棋盘格：1px / 2px / 4px 三种格子（看摩尔纹与像素对齐） */
-    int by = TOP + 152;
+    int by = TOP + 148;
     for (int y = 0; y < 26; y++) {
         for (int x = 0; x < 48; x++) {
             if (((x >> 0) + (y >> 0)) & 1) eui_draw_pixel(c, 8 + x, by + y, EUI_MODE_SET);

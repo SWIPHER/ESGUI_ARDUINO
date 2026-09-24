@@ -17,10 +17,13 @@
   · line_height = 全部字形最底像素 - 最顶像素（紧凑不重叠）；base_line = 基线到行顶距离。
 
 用法：
-  python3 tools/gen_font_big.py                     # 默认参数生成（PingFang 30px）
-  python3 tools/gen_font_big.py --size 28 --font "/System/Library/Fonts/Hiragino Sans GB.ttc"
-  python3 tools/gen_font_big.py --preview           # 只在终端预览字形与度量，不写文件
-  python3 tools/gen_font_big.py --list-faces        # 列出 .ttc 里的字体面（选 index 用）
+  python3 tools/gen_font_big.py                      # 默认参数生成（思源等宽 SC 26px）
+  python3 tools/gen_font_big.py --size 30            # 换字号
+  python3 tools/gen_font_big.py --font "/System/Library/Fonts/PingFang.ttc" --index 2
+  python3 tools/gen_font_big.py --preview            # 只在终端预览字形与度量，不写文件
+  python3 tools/gen_font_big.py --list-faces         # 列出 .ttc 里的字体面（选 index 用）
+
+更多说明见 change_font.md。
 """
 
 import argparse
@@ -35,9 +38,11 @@ OUT_C = "src/font_big.c"
 OUT_H = "src/font_big.h"
 FONT_NAME = "font_big"
 
-DEFAULT_TTF = "/System/Library/Fonts/PingFang.ttc"
-DEFAULT_INDEX = 0
-DEFAULT_SIZE = 30
+# 默认字体：思源等宽（Source Han Mono，开源可再分发）简体中文面。
+# 换字体/字号见 change_font.md；--font/--index/--size 均可覆盖。
+DEFAULT_TTF = "myfont/SourceHanMono-Regular.ttc"
+DEFAULT_INDEX = 0            # 0=Source Han Mono SC（1=TC 2=HC 3=通用 4=K）
+DEFAULT_SIZE = 26
 DEFAULT_THRESHOLD = 128
 
 ASCII_START, ASCII_END = 0x20, 0x7E
@@ -132,6 +137,7 @@ def main():
     ap.add_argument("--index", type=int, default=DEFAULT_INDEX)
     ap.add_argument("--size", type=int, default=DEFAULT_SIZE)
     ap.add_argument("--threshold", type=int, default=DEFAULT_THRESHOLD)
+    ap.add_argument("--chars", default="", help="额外要收录的字符（如 --chars '※℃✓'）")
     ap.add_argument("--preview", action="store_true", help="只预览字形与度量，不写文件")
     ap.add_argument("--list-faces", action="store_true", help="列出字体面后退出")
     args = ap.parse_args()
@@ -150,8 +156,8 @@ def main():
           % (args.font, args.index, args.size, font.getname()))
 
     sparse = load_charset()
-    codes = list(range(ASCII_START, ASCII_END + 1)) + sorted(set(sparse) |
-                                                             {ord(c) for c in EXTRA_CHARS})
+    extra = set(ord(c) for c in EXTRA_CHARS) | set(ord(c) for c in args.chars)
+    codes = list(range(ASCII_START, ASCII_END + 1)) + sorted(set(sparse) | extra)
     print("字符数: ASCII %d + 稀疏 %d" % (ASCII_END - ASCII_START + 1, len(codes) - 95))
 
     glyphs, top_min, bot_max, ascent = render_glyphs(font, codes, args.threshold)

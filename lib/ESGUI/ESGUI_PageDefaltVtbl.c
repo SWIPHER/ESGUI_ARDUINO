@@ -1024,8 +1024,9 @@ void esgui_text_menu_defalt_on_draw(ESGUI_MenuPage_T *page)
 
     canvas_clip_pop(c_it->canvas);
 
-    /* 绘制焦点框 */
-    ESGUI_WidgetTextFocusBox(c_it->canvas, 0, pd->focus_box_y,
+    /* 绘制焦点框（OFF_X/OFF_Y 把框摆到文字正中心，取值见 ESGUI_DefaultConfig.h） */
+    ESGUI_WidgetTextFocusBox(c_it->canvas, ESGUI_FOCUS_BOX_OFF_X,
+        pd->focus_box_y + ESGUI_FOCUS_BOX_OFF_Y,
         pd->font_height, (eui_uint8_t)pd->focus_box_w);
 
     /* 页面切换过渡动画遮罩：必须确认动画确实在跑才叠加。
@@ -2604,7 +2605,7 @@ void esgui_default_message_popwindow_on_draw(ESGUI_MenuPage_T *page) {
         int y = window->window_y + window->window_h - 15;
         eui_draw_text(c_it->canvas,x,y,
             &ESGUI_DEFAULT_FONT,"OK",EUI_MODE_SET);
-        ESGUI_WidgetTextFocusBox(c_it->canvas,x,y,data->font_height,data->text_len);
+        ESGUI_WidgetTextFocusBox(c_it->canvas,x,y + ESGUI_FOCUS_BOX_OFF_Y,data->font_height,data->text_len);
     }
     canvas_clip_pop(c_it->canvas);
 }
@@ -2817,7 +2818,7 @@ void esgui_default_message_scroll_title_popwindow_on_draw(ESGUI_MenuPage_T *page
         int x = (window->window_w - data->text_len) / 2 + window->window_x;
         int y = window->window_y + window->window_h - 15;
         eui_draw_text(c_it->canvas, x, y, &ESGUI_DEFAULT_FONT, "OK", EUI_MODE_SET);
-        ESGUI_WidgetTextFocusBox(c_it->canvas, x, y, data->font_height, data->text_len);
+        ESGUI_WidgetTextFocusBox(c_it->canvas, x, y + ESGUI_FOCUS_BOX_OFF_Y, data->font_height, data->text_len);
     }
     canvas_clip_pop(c_it->canvas);
 }
@@ -3061,7 +3062,7 @@ void esgui_default_bool_popwindow_on_draw(ESGUI_MenuPage_T *page) {
         &ESGUI_DEFAULT_FONT,window->items[0].label,EUI_MODE_SET);
     eui_draw_text(c_it->canvas,window->items[0].x + data->text1_len + ESGUI_BOOL_POPWINDOW_TEXT_GAP,window->items[0].y,
         &ESGUI_DEFAULT_FONT,window->items[1].label,EUI_MODE_SET);
-    ESGUI_WidgetTextFocusBox(c_it->canvas,data->focus_x,window->items[0].y,data->font_height,data->focus_w);
+    ESGUI_WidgetTextFocusBox(c_it->canvas,data->focus_x,window->items[0].y + ESGUI_FOCUS_BOX_OFF_Y,data->font_height,data->focus_w);
     canvas_clip_pop(c_it->canvas);
 }
 
@@ -3185,7 +3186,7 @@ void esgui_default_bool_scroll_title_popwindow_on_draw(ESGUI_MenuPage_T *page) {
         &ESGUI_DEFAULT_FONT, window->items[0].label, EUI_MODE_SET);
     eui_draw_text(c_it->canvas, window->items[0].x + data->text1_len + ESGUI_BOOL_POPWINDOW_TEXT_GAP, window->items[0].y,
         &ESGUI_DEFAULT_FONT, window->items[1].label, EUI_MODE_SET);
-    ESGUI_WidgetTextFocusBox(c_it->canvas, data->focus_x, window->items[0].y, data->font_height, data->focus_w);
+    ESGUI_WidgetTextFocusBox(c_it->canvas, data->focus_x, window->items[0].y + ESGUI_FOCUS_BOX_OFF_Y, data->font_height, data->focus_w);
     canvas_clip_pop(c_it->canvas);
 }
 
@@ -3937,8 +3938,8 @@ void esgui_default_text_list_popwindow_on_draw(ESGUI_MenuPage_T *page)
     }
     eui_int16_t abs_focus_y = window->window_y + 3 + data->focus_box_y;
     ESGUI_WidgetTextFocusBox(c_it->canvas,
-        window->window_x,
-        abs_focus_y,
+        window->window_x + ESGUI_FOCUS_BOX_OFF_X,
+        abs_focus_y + ESGUI_FOCUS_BOX_OFF_Y,
         data->font_height,
         (eui_uint8_t)data->focus_box_w);
     canvas_clip_pop(c_it->canvas);
@@ -4125,8 +4126,8 @@ void esgui_default_text_list_scroll_title_popwindow_on_draw(ESGUI_MenuPage_T *pa
     }
     eui_int16_t abs_focus_y = window->window_y + 3 + title_h + data->focus_box_y;
     ESGUI_WidgetTextFocusBox(c_it->canvas,
-        window->window_x,
-        abs_focus_y,
+        window->window_x + ESGUI_FOCUS_BOX_OFF_X,
+        abs_focus_y + ESGUI_FOCUS_BOX_OFF_Y,
         data->font_height,
         (eui_uint8_t)data->focus_box_w);
     canvas_clip_pop(c_it->canvas);
