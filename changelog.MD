@@ -219,6 +219,48 @@ int y = window->window_y + window->window_h - 15;
 
 ---
 
+## [未发布] 2026-09-24 —— 弹窗关闭后图标跳动修复
+
+### 修复
+
+#### 弹窗关闭后图标跳动（瞬移到右边又瞬移回来）
+
+**现象**：在 BMP/3D 菜单中点击图标弹出消息框，点击 OK 关闭后，图标会快速右移然后再快速移回正确位置。
+
+**根因**：弹窗关闭时会调用底层页面的 `on_relayout`，触发 `recenter` 函数并总是启动移动动画。
+
+**修复**：
+
+| 文件 | 行号 | 改动 |
+| :--- | :--- | :--- |
+| `lib/ESGUI/ESGUI_PageDefaltVtbl.c` | 1528-1545 | BMP 菜单 `esgui_bmp_menu_recenter`：添加位置检查，只有位置改变时才启动动画 |
+| `lib/ESGUI/ESGUI_PageDefaltVtbl.c` | 2224-2240 | 3D 菜单 `esgui_3d_menu_recenter`：添加位置检查，只有位置改变时才启动动画 |
+| `lib/ESGUI/ESGUI_Menu.c` | 167-183 | 移除 ACT_CLOSE_POPUP 中的 `on_relayout` 调用 |
+| `lib/ESGUI/ESGUI_Menu.c` | 100-113 | 移除 `ESGUI_MenuCtrlClosePopWindow` 末尾的 `on_relayout` 调用 |
+
+**原理**：弹窗的打开/关闭不会改变底层页面的布局，因此不需要在弹窗关闭时调用 `on_relayout` 重新计算布局。添加位置检查避免在位置已正确时启动不必要的动画。
+
+---
+
+### 验证（待实测）
+
+| 检查项 | 预期 |
+| :--- | :--- |
+| 编译 | **exit=0** |
+| BMP 菜单弹窗关闭 | 图标不再跳动 |
+| 3D 菜单弹窗关闭 | 图标不再跳动 |
+
+---
+
+### 变更文件清单
+
+| 文件 | 状态 | 说明 |
+| :--- | :--- | :--- |
+| `lib/ESGUI/ESGUI_PageDefaltVtbl.c` | 改 | recenter 函数添加位置检查 |
+| `lib/ESGUI/ESGUI_Menu.c` | 改 | 移除弹窗关闭时的 on_relayout 调用 |
+
+
+
 ## 已提交历史（对照）
 
 | 提交 | 日期 | 说明 |

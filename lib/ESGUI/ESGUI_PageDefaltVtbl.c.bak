@@ -1528,17 +1528,14 @@ static void esgui_bmp_menu_recenter(ESGUI_MenuPage_T *page)
     const Bitmap *focus_bmp = bmp_item_bitmap(page, focus_idx, dat);
     eui_int16_t focus_w = focus_bmp ? focus_bmp->w : 0;
     eui_int16_t target_base = (canvas_w - focus_w) / 2 - focus_rel_x;
-    /* 位置已正确则不启动动画，避免弹窗关闭后图标跳动 */
-    if (page->items[0].x != target_base) {
-        anim_t anim = {0};
-        anim.var       = &page->items[0].x;
-        anim.start     = page->items[0].x;
-        anim.end       = target_base;
-        anim.exec_cb   = anim_cb_int;
-        anim.duration  = 300;
-        anim.path_type = ANIM_PATH_EASE_OUT;
-        anim_start(&anim);
-    }
+    anim_t anim = {0};
+    anim.var       = &page->items[0].x;
+    anim.start     = page->items[0].x;
+    anim.end       = target_base;
+    anim.exec_cb   = anim_cb_int;
+    anim.duration  = 300;
+    anim.path_type = ANIM_PATH_EASE_OUT;
+    anim_start(&anim);
     eui_uint16_t target_per = (eui_uint16_t)(((eui_uint32_t)(focus_idx + 1) * 1000U + page->item_num / 2U) / page->item_num);
     if (target_per > 1000) target_per = 1000;
     anim_t anim_p = {0};
@@ -2222,17 +2219,14 @@ static void esgui_3d_menu_recenter(ESGUI_MenuPage_T *page)
     eui_uint16_t focus_idx = page->focus_idx;
     eui_int16_t focus_rel_x = bmp_item_rel_x(page, focus_idx);
     eui_int16_t target_base = (canvas_w - (eui_int16_t)dat->slot_w) / 2 - focus_rel_x;
-    /* 位置已正确则不启动动画，避免弹窗关闭后图标跳动 */
-    if (page->items[0].x != target_base) {
-        anim_t anim = {0};
-        anim.var       = &page->items[0].x;
-        anim.start     = page->items[0].x;
-        anim.end       = target_base;
-        anim.exec_cb   = anim_cb_int;
-        anim.duration  = 300;
-        anim.path_type = ANIM_PATH_EASE_OUT;
-        anim_start(&anim);
-    }
+    anim_t anim = {0};
+    anim.var       = &page->items[0].x;
+    anim.start     = page->items[0].x;
+    anim.end       = target_base;
+    anim.exec_cb   = anim_cb_int;
+    anim.duration  = 300;
+    anim.path_type = ANIM_PATH_EASE_OUT;
+    anim_start(&anim);
     eui_uint16_t target_per = (eui_uint16_t)(((eui_uint32_t)(focus_idx + 1) * 1000U + page->item_num / 2U) / page->item_num);
     if (target_per > 1000) target_per = 1000;
     anim_t anim_p = {0};

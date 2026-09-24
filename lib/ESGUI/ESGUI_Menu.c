@@ -111,16 +111,6 @@ void ESGUI_MenuCtrlClosePopWindow(ESGUI_MenuCtrl_T *emc) {
     emc->pop_window_en = (emc->pop_depth > 0) ? 1 : 0;
     emc->need_refresh = 1;
 
-    /* 弹窗关闭后重排底层页面布局：弹窗操作可能改动了条目特殊宽度/arg 等，
-     * 而布局缓存（text_need_len/焦点框宽度）只在 recenter 中刷新，
-     * 此处调用 on_relayout（无过渡动画）保证关闭弹窗后布局立即一致。
-     * on_relayout 为 NULL（未启用运行时条目增删 / 页面无实现）时自然跳过。 */
-    if (emc->menu_depth > 0) {
-        ESGUI_MenuPage_T *page = emc->page_stack[emc->menu_depth - 1];
-        if (page && page->vtbl && page->vtbl->on_relayout) {
-            page->vtbl->on_relayout(page, page->focus_idx, page->focus_idx);
-        }
-    }
 }
 
 /**
@@ -172,12 +162,6 @@ void ESGUI_MenuCtrlHandleAction(ESGUI_MenuCtrl_T *emc, ESGUI_MenuAction_T *act)
                  * 宽度/arg 等，而布局缓存只在 recenter 中刷新。提前重排可保证
                  * 关闭过渡动画期间的渲染帧即采用新布局，避免焦点框从旧宽度跳变。
                  * on_relayout 为 NULL（未启用运行时条目增删/页面无实现）时跳过。 */
-                if (emc->menu_depth > 0) {
-                    ESGUI_MenuPage_T *base_page = emc->page_stack[emc->menu_depth - 1];
-                    if (base_page && base_page->vtbl && base_page->vtbl->on_relayout) {
-                        base_page->vtbl->on_relayout(base_page, base_page->focus_idx, base_page->focus_idx);
-                    }
-                }
                 if (top_popup->vtbl->on_page_chenge) {
                     top_popup->vtbl->on_page_chenge((ESGUI_MenuPage_T*)top_popup, act);
                     ESGUI_MenuCtrlPreparePopPage(emc);
