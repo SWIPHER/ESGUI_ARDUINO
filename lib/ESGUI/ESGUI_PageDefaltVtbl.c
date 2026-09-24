@@ -946,7 +946,7 @@ void esgui_text_menu_defalt_on_draw(ESGUI_MenuPage_T *page)
     /* 绘制标题和分割线 */
     if (page->title && page->title[0]) {
         eui_draw_text_clip(c_it->canvas, 0, 0, &ESGUI_DEFAULT_FONT, page->title, EUI_MODE_SET, max_text_w);
-        eui_draw_hline(c_it->canvas, 0, pd->line_len, pd->title_h, EUI_MODE_SET);
+        eui_draw_hline(c_it->canvas, 0, pd->line_len, pd->title_h + ESGUI_TITLE_LINE_OFFSET, EUI_MODE_SET);
     }
 
     /* 右侧纵向进度条 */

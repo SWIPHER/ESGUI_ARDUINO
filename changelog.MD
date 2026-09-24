@@ -228,3 +228,17 @@ int y = window->window_y + window->window_h - 15;
 | `78f5b0c` | 2026-09-23 | 增加了修改指南 |
 | `f4da175` | 2026-09-23 | 每个UI模块的测试页面 |
 | `c091674` | 2026-09-15 | Initial commit |
+
+#### 4. 标题下方分割线与标题重合
+
+**现象**：每个页面的标题下面的竖线离标题太近，有重合。
+
+**根因**：`esgui_default_text_menu_on_draw` 第 949 行，分割线直接画在 `title_h` 位置。
+
+**修复**：
+
+| 文件 | 行号 | 改前 | 改后 |
+| :--- | :---: | :--- | :--- |
+| `lib/ESGUI/ESGUI_PageDefaltVtbl.c` | 949 | `pd->title_h` | `pd->title_h + ESGUI_TITLE_LINE_OFFSET` |
+
+**原理**：现在分割线从 `title_h + 2`（默认值）位置开始绘制，与标题底部的间距为 2 像素。
