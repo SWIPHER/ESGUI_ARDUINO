@@ -2567,8 +2567,13 @@ void esgui_default_message_popwindow_on_create(ESGUI_MenuPage_T *page) {
     CanvasStripIter *c_it = page->render_ctx;
     ESGUI_DEFAULT_MESSAGE_WINDOW_DAT *data = (ESGUI_DEFAULT_MESSAGE_WINDOW_DAT*)window->draw_data;
     if (data == ESGUI_NULL) return;
+    /* 限制弹窗宽度不超过屏幕宽度（留 10px 边距） */
+    eui_int16_t canvas_w = canvas_get_width(c_it);
+    if (window->window_w > (eui_uint16_t)(canvas_w - 10)) {
+        window->window_w = canvas_w - 10;
+    }
     data->font_height = eui_get_text_height(&ESGUI_DEFAULT_FONT,"0");
-    window->window_x = (canvas_get_width(c_it) - window->window_w) / 2;
+    window->window_x = (canvas_w - window->window_w) / 2;
     data->text_len = eui_get_text_width(&ESGUI_DEFAULT_FONT,"OK");
 }
 
@@ -2959,10 +2964,21 @@ void esgui_default_bool_popwindow_on_create(ESGUI_MenuPage_T *page) {
     CanvasStripIter *c_it = page->render_ctx;
     ESGUI_DEFAULT_BOOL_WONDOW_DAT *data = (ESGUI_DEFAULT_BOOL_WONDOW_DAT*)window->draw_data;
     if (data == ESGUI_NULL) return;
+    /* 限制弹窗宽度不超过屏幕宽度（留 10px 边距） */
+    eui_int16_t canvas_w = canvas_get_width(c_it);
+    if (window->window_w > (eui_uint16_t)(canvas_w - 10)) {
+        window->window_w = canvas_w - 10;
+    }
     data->font_height = eui_get_text_height(&ESGUI_DEFAULT_FONT,"0");
+
+    /* 限制弹窗高度不超过屏幕高度（留 10px 边距） */
+    eui_int16_t canvas_h = canvas_get_height(c_it);
+    if (window->window_h > (eui_uint16_t)(canvas_h - 10)) {
+        window->window_h = canvas_h - 10;
+    }
     data->text1_len = eui_get_text_width(&ESGUI_DEFAULT_FONT,page->items[0].label);
     data->text2_len = eui_get_text_width(&ESGUI_DEFAULT_FONT,page->items[1].label);
-    window->window_x = (canvas_get_width(c_it) - window->window_w) / 2;
+    window->window_x = (canvas_w - window->window_w) / 2;
     window->items[0].x = (window->window_w - data->text1_len - data->text2_len - ESGUI_BOOL_POPWINDOW_TEXT_GAP) / 2 + window->window_x;
     window->items[1].x = window->items[0].x + data->text1_len + ESGUI_BOOL_POPWINDOW_TEXT_GAP;
 }
@@ -3054,7 +3070,7 @@ void esgui_default_bool_popwindow_on_draw(ESGUI_MenuPage_T *page) {
     ESGUI_PopWindow_T *window = (ESGUI_PopWindow_T*)page;
     ESGUI_DEFAULT_BOOL_WONDOW_DAT *data = window->draw_data;
     if (data == ESGUI_NULL || window->item_num < 2) return;
-    window->items[0].y = window->window_y + window->window_h - 15;
+    window->items[0].y = window->window_y + window->window_h - 10 - data->font_height;  /* 按钮底部距离弹窗底部 10px */
     Area a = {window->window_x, window->window_y,window->window_x+window->window_w,window->window_y+window->window_h};
     canvas_clip_push(c_it->canvas,&a);
     eui_draw_round_rect_box(c_it->canvas,window->window_x, window->window_y,window->window_x+window->window_w,window->window_y+window->window_h,5,EUI_MODE_SET);
@@ -3177,7 +3193,7 @@ void esgui_default_bool_scroll_title_popwindow_on_draw(ESGUI_MenuPage_T *page) {
     ESGUI_PopWindow_T *window = (ESGUI_PopWindow_T*)page;
     ESGUI_DEFAULT_BOOL_WONDOW_DAT *data = window->draw_data;
     if (data == ESGUI_NULL || window->item_num < 2) return;
-    window->items[0].y = window->window_y + window->window_h - 15;
+    window->items[0].y = window->window_y + window->window_h - 10 - data->font_height;  /* 按钮底部距离弹窗底部 10px */
     Area a = {window->window_x, window->window_y, window->window_x + window->window_w, window->window_y + window->window_h};
     canvas_clip_push(c_it->canvas, &a);
     eui_draw_round_rect_box(c_it->canvas, window->window_x, window->window_y,
@@ -3314,8 +3330,13 @@ void esgui_default_value_popwindow_on_create(ESGUI_MenuPage_T *page) {
     CanvasStripIter *c_it = page->render_ctx;
     ESGUI_DEFAULT_VALUE_WINDOW_DAT *data = (ESGUI_DEFAULT_VALUE_WINDOW_DAT*)window->draw_data;
     if (data == ESGUI_NULL) return;
+    /* 限制弹窗宽度不超过屏幕宽度（留 10px 边距） */
+    eui_int16_t canvas_w = canvas_get_width(c_it);
+    if (window->window_w > (eui_uint16_t)(canvas_w - 10)) {
+        window->window_w = canvas_w - 10;
+    }
     data->font_height = eui_get_text_height(&ESGUI_DEFAULT_FONT,"0");
-    window->window_x = (canvas_get_width(c_it) - window->window_w) / 2;
+    window->window_x = (canvas_w - window->window_w) / 2;
     if (data->value_desc != ESGUI_NULL && data->value_desc->get_permille != ESGUI_NULL && data->value_desc->to_string != ESGUI_NULL) {
         data->value_desc->to_string(data->value_desc->ctx,data->value_str,sizeof(data->value_str));
         data->text_len = eui_get_text_width(&ESGUI_DEFAULT_FONT,data->value_str);
@@ -3692,13 +3713,24 @@ void esgui_default_text_list_popwindow_on_create(ESGUI_MenuPage_T *page)
     ESGUI_DEFAULT_TEXT_LIST_WINDOW_DAT *data = page->draw_data;
     if (data == ESGUI_NULL) return;
     CanvasStripIter *c_it = page->render_ctx;
+    /* 限制弹窗宽度不超过屏幕宽度（留 10px 边距） */
+    eui_int16_t canvas_w = canvas_get_width(c_it);
+    if (window->window_w > (eui_uint16_t)(canvas_w - 10)) {
+        window->window_w = canvas_w - 10;
+    }
+
+    /* 限制弹窗高度不超过屏幕高度（留 10px 边距） */
+    eui_int16_t canvas_h = canvas_get_height(c_it);
+    if (window->window_h > (eui_uint16_t)(canvas_h - 10)) {
+        window->window_h = canvas_h - 10;
+    }
     page->items[0].y = 0;
     data->font_height = (eui_uint8_t)eui_get_text_height(&ESGUI_DEFAULT_FONT, page->items[0].label);
     data->item_stride = data->font_height + ESGUI_ITEM_SPACING;
     data->buff = (eui_uint16_t)(window->window_h / data->item_stride);
     if (data->buff == 0) data->buff = 1;
     data->stay = (data->buff + 1) / 2;
-    window->window_x = (canvas_get_width(c_it) - window->window_w) / 2;
+    window->window_x = (canvas_w - window->window_w) / 2;
     eui_uint16_t text_len = eui_get_text_width(&ESGUI_DEFAULT_FONT, page->items[0].label);
     data->text_len = text_len;
     eui_int16_t max_text_w = window->window_w - 6;
@@ -4297,6 +4329,17 @@ void esgui_default_bmp_list_popwindow_on_create(ESGUI_MenuPage_T *page) {
     CanvasStripIter *c_it = page->render_ctx;
     ESGUI_DEFAULT_BMP_LIST_WINDOW_DAT *dat = page->draw_data;
     if (dat == ESGUI_NULL) return;
+    /* 限制弹窗宽度不超过屏幕宽度（留 10px 边距） */
+    eui_int16_t canvas_w = canvas_get_width(c_it);
+    if (window->window_w > (eui_uint16_t)(canvas_w - 10)) {
+        window->window_w = canvas_w - 10;
+    }
+
+    /* 限制弹窗高度不超过屏幕高度（留 10px 边距） */
+    eui_int16_t canvas_h = canvas_get_height(c_it);
+    if (window->window_h > (eui_uint16_t)(canvas_h - 10)) {
+        window->window_h = canvas_h - 10;
+    }
     dat->font_height = (eui_uint8_t)eui_get_text_height(&ESGUI_DEFAULT_FONT, "0");
     dat->content_padding = 5;
     esgui_bmp_list_popwindow_recompute_layout(page, dat);
@@ -4306,7 +4349,7 @@ void esgui_default_bmp_list_popwindow_on_create(ESGUI_MenuPage_T *page) {
     const Bitmap *first_bmp = bmp_list_item_bitmap(page, 0, dat);
     dat->box_target_w = first_bmp ? first_bmp->w + 4 : 0;
     dat->box_target_h = first_bmp ? first_bmp->h + 4 : 0;
-    window->window_x = (canvas_get_width(c_it) - window->window_w) / 2;
+    window->window_x = (canvas_w - window->window_w) / 2;
 }
 
 /**
@@ -4953,13 +4996,25 @@ void esgui_default_keyboard_popwindow_on_create(ESGUI_MenuPage_T *page) {
     ESGUI_DEFAULT_KEYBOARD_WINDOW_DAT *data = (ESGUI_DEFAULT_KEYBOARD_WINDOW_DAT*)window->draw_data;
     if (data == ESGUI_NULL) return;
 
+    /* 限制弹窗宽度不超过屏幕宽度（留 10px 边距） */
+    eui_int16_t canvas_w = canvas_get_width(c_it);
+    if (window->window_w > (eui_uint16_t)(canvas_w - 10)) {
+        window->window_w = canvas_w - 10;
+    }
+
+    /* 限制弹窗高度不超过屏幕高度（留 10px 边距） */
+    eui_int16_t canvas_h = canvas_get_height(c_it);
+    if (window->window_h > (eui_uint16_t)(canvas_h - 10)) {
+        window->window_h = canvas_h - 10;
+    }
+
     data->font_height = (eui_uint16_t)eui_get_text_height(&ESGUI_KEY_BOARD_FONT, "0");
     data->edit_h = data->font_height + 4;
 
     /* 定位：水平居中，垂直贴屏幕下半部分 */
-    window->window_x = (canvas_get_width(c_it) - window->window_w) / 2;
+    window->window_x = (canvas_w - window->window_w) / 2;
     if (window->window_x < 0) window->window_x = 0;
-    window->window_y = canvas_get_height(c_it) - window->window_h;
+    window->window_y = canvas_h - window->window_h;
     if (window->window_y < 0) window->window_y = 0;
     data->kb_area_h = (window->window_h > data->edit_h) ? (eui_uint16_t)(window->window_h - data->edit_h) : 1;
 
@@ -5271,10 +5326,16 @@ void esgui_default_message_longtext_popwindow_on_create(ESGUI_MenuPage_T *page) 
     CanvasStripIter *c_it = page->render_ctx;
     ESGUI_DEFAULT_MESSAGE_LONGTEXT_WINDOW_DAT *data = (ESGUI_DEFAULT_MESSAGE_LONGTEXT_WINDOW_DAT*)window->draw_data;
     if (data == ESGUI_NULL) return;
+
+    /* 限制弹窗宽度不超过屏幕宽度（留 10px 边距） */
+    eui_int16_t canvas_w = canvas_get_width(c_it);
+    if (window->window_w > (eui_uint16_t)(canvas_w - 10)) {
+        window->window_w = canvas_w - 10;
+    }
     data->font_height = (eui_uint16_t)eui_get_text_height(&ESGUI_DEFAULT_FONT, "0");
     data->text_w = (window->window_w > (eui_uint16_t)(ESGUI_PROGRESS_BAR_W + 12))
                    ? (eui_uint16_t)(window->window_w - ESGUI_PROGRESS_BAR_W - 12) : 10;
-    window->window_x = (canvas_get_width(c_it) - window->window_w) / 2;
+    window->window_x = (canvas_w - window->window_w) / 2;
     if (window->window_x < 0) window->window_x = 0;
     if (data->msg) {
         data->line_num = lt_build_lines(data->msg, data->text_w, &ESGUI_DEFAULT_FONT,
