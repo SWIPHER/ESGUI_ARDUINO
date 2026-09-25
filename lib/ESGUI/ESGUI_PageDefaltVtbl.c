@@ -2526,6 +2526,8 @@ void ESGUI_Default3DMenuCreate(ESGUI_MenuPage_T *page, const char *title,
  */
 static void start_popwindow_window_anim(ESGUI_PopWindow_T *window,int y_sta,int y_end,eui_uint32_t duration,anim_path_type_t path_type) {
     if (window == ESGUI_NULL) return;
+    /* 停止同变量的旧动画，防止快速点击导致动画状态混乱 */
+    anim_stop_all(&window->window_y);
     anim_t anim = {0};
     anim.var       = &window->window_y;
     anim.start     = y_sta;

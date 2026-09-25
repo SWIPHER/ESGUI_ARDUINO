@@ -31,7 +31,7 @@
  * 模式 1 必须保持 ESGUI_ENABLE_MULTITHREAD = 1（下面有 #error 帮你会诊）。
  */
 #ifndef PORT_USE_UI_TASK
-#define PORT_USE_UI_TASK 1
+#define PORT_USE_UI_TASK 0
 #endif
 
 #if PORT_USE_UI_TASK && !ESGUI_ENABLE_MULTITHREAD

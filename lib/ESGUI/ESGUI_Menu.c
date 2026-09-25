@@ -4,6 +4,8 @@
 
 #include "ESGUI_Menu.h"
 #include "string.h"
+#include "ESGUI_Anim.h"
+#include "ESGUI_PageDefaltVtbl.h"
 #if ESGUI_ENABLE_MENU_RUNTIME_ITEMS
 #include <stdlib.h>   /* 运行时增删（动态菜单）：realloc */
 #endif
@@ -83,6 +85,24 @@ void ESGUI_MenuCtrlShowPopWindow(ESGUI_MenuCtrl_T *emc, ESGUI_PopWindow_T *popup
         if (emc->pop_stack[i] == popup) return;
     }
     if (emc->pop_depth >= ESGUI_MAX_POPUP_DEPTH) return;
+    /* 已有弹窗显示中，忽略新的打开请求（防止快速连续点击导致状态混乱） */
+    if (emc->pop_window_en) return;
+
+    /* 打开弹窗时，停止底层页面的所有动画，防止动画池满导致状态异常 */
+    if (emc->menu_depth > 0) {
+        ESGUI_MenuPage_T *page = emc->page_stack[emc->menu_depth - 1];
+        if (page && page->items) {
+            anim_stop_all(&page->items[0].x);
+            anim_stop_all(&page->items[0].y);
+            /* 停止3D菜单的其他动画变量 */
+            ESGUI_DEFAULT_3D_MENU_DAT *dat = (ESGUI_DEFAULT_3D_MENU_DAT *)page->draw_data;
+            if (dat) {
+                anim_stop_all(&dat->progress_bar_per);
+                anim_stop_all(&dat->box_permille);
+                anim_stop_all(&dat->label_anim_y);
+            }
+        }
+    }
 
     emc->pop_stack[emc->pop_depth] = popup;
     emc->pop_depth++;

@@ -284,3 +284,17 @@ int y = window->window_y + window->window_h - 15;
 | `lib/ESGUI/ESGUI_PageDefaltVtbl.c` | 949 | `pd->title_h` | `pd->title_h + ESGUI_TITLE_LINE_OFFSET` |
 
 **原理**：现在分割线从 `title_h + 2`（默认值）位置开始绘制，与标题底部的间距为 2 像素。
+
+#### 5. 快速点击弹窗导致界面卡死
+
+**现象**：在带动画的选项上快速连续点击（消息框或新窗口出现前），界面无法操控，但动画继续运行。
+
+**根因**：`start_popwindow_window_anim` 启动新动画时，没有停止同变量的旧动画。当快速点击时，后一次动画会"热更新"前一次的动画，导致 must_complete 状态混乱。
+
+**修复**：
+
+| 文件 | 行号 | 改前 | 改后 |
+| :--- | :---: | :--- | :--- |
+| `lib/ESGUI/ESGUI_PageDefaltVtbl.c` | 2529 | (无) | 添加 `anim_stop_all(&window->window_y);` |
+
+**原理**：启动新动画前先停止同变量的旧动画，防止快速点击导致动画状态混乱。
